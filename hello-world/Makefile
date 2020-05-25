@@ -1,9 +1,9 @@
 out := target
 
-default: build
+default: run
 
 clean:
-	rm -r $(out)
+	rm -rf $(out)
 
 target:
 	mkdir -p $(out)
@@ -15,3 +15,6 @@ $(out)/hw: $(out)/hw.o
 	ld -o $(out)/hw $(out)/hw.o
 
 build: $(out)/hw
+
+run: $(out)/hw
+	-./$(out)/hw
