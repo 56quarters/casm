@@ -16,5 +16,8 @@ $(out)/hw: $(out)/hw.o
 
 build: $(out)/hw
 
-run: $(out)/hw
+run: build
 	-./$(out)/hw
+
+strace: build
+	-strace ./$(out)/hw
