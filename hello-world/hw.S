@@ -8,16 +8,7 @@
     /** ************ **/
     .data
 
-msg:
-    .ascii "Hi there stranger!\n"
-    msg_len = . - msg
-
-err:
-    .ascii "Oh noes!\n"
-    err_len = . - err
-
-file:
-    .ascii "/tmp\0"
+buf_sz = 1024 * 1024
 
     /** ************ **/
     /** text section **/
@@ -28,30 +19,52 @@ file:
     .global _start
 
 _start:
-    /* write() syscall to stdout */
+    /* malloc() a 1MB buffer */
+    movq $buf_sz, %rdi
+    call malloc
+    movq %rax, %r12
+
+    jmp read_write_buf
+
+exit_success:
+    /* exit() syscall with status 0 */
+    movq $60, %rax
+    movq $0, %rdi
+    syscall
+
+exit_error:
+    /* exit() syscall with status 1 */
+    movq $60, %rax
+    movq $1, %rdi
+    syscall
+
+read_write_buf:
+    /*
+    r12 = buffer address
+    r13 = bytes read from stdin
+    */
+
+    /* read() syscall from stdin */
+    movq $0, %rax
+    movq $0, %rdi
+    movq %r12, %rsi
+    movq $buf_sz, %rdx
+    syscall
+
+    /* store number of bytes read in r13 */
+    movq %rax, %r13
+
+    /* write() syscall to stdout from buf */
     movq $1, %rax
     movq $1, %rdi
-    movq $msg, %rsi
-    movq $msg_len, %rdx
+    movq %r12, %rsi
+    movq %r13, %rdx
     syscall
 
-    /* write() syscall to stderr */
-    movq $1, %rax
-    movq $2, %rdi
-    movq $err, %rsi
-    movq $err_len, %rdx
-    syscall
+    /* if we read the max number of bytes, try another read */
+    movq $buf_sz, %rax
+    cmp %r13, %rax
+    je read_write_buf
 
-    /* access() syscall */
-    movq $21, %rax
-    movq $file, %rdi
-    movq $0, %rsi
-    syscall
-
-    /* store return of access() in r10 */
-    movq %rax, %r10
-
-    /* exit() syscall with return from access */
-    movq $60, %rax
-    movq %r10, %rdi
-    syscall
+    /* exit with success if we didn't jump */
+    jmp exit_success

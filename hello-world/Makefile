@@ -1,4 +1,6 @@
 out := target
+arch := x86-64
+linker := /lib/ld-linux-$(arch).so.2
 
 default: run
 
@@ -9,10 +11,10 @@ target:
 	mkdir -p $(out)
 
 $(out)/hw.o: hw.S target
-	gcc -o $(out)/hw.o -c hw.S
+	gcc -ggdb -o $(out)/hw.o -c hw.S
 
 $(out)/hw: $(out)/hw.o
-	ld -o $(out)/hw $(out)/hw.o
+	ld --dynamic-linker $(linker) -lc -o $(out)/hw $(out)/hw.o
 
 build: $(out)/hw
 
