@@ -2,7 +2,7 @@ out := target
 arch := x86-64
 linker := /lib/ld-linux-$(arch).so.2
 
-default: run
+default: build
 
 clean:
 	rm -rf $(out)
