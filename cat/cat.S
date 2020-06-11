@@ -8,7 +8,21 @@
     /** ************ **/
     .data
 
-buf_sz = 1024 * 8
+buf:
+    .space 8192, 0x0
+    buf_len = . - buf
+
+help:
+    .ascii "Help text!"
+    help_len = . - help
+
+help_long:
+    .ascii "--help"
+    help_long_len = . - help_long
+
+help_short:
+    .ascii "-h"
+    help_short_len = . - help_short
 
     /** ************ **/
     /** text section **/
@@ -19,18 +33,11 @@ buf_sz = 1024 * 8
     .global _start
 
 _start:
-    /* malloc() a 1MB buffer into r12 */
-    movq $buf_sz, %rdi
-    call malloc
-    movq %rax, %r12
-
+    /* default to using fd 0 (stdin) for reads */
+    movq $0, %r12
     jmp read_buf
 
 exit_success:
-    /* free() call for buffer in r12 */
-    movq %r12, %rdi
-    call free
-
     /* exit() syscall with status 0 */
     movq $60, %rax
     movq $0, %rdi
@@ -38,18 +45,18 @@ exit_success:
 
 read_buf:
     /*
-    r12 = buffer address
+    r12 = read file descriptor
     r13 = bytes read from stdin
     */
 
     /* read() syscall from stdin */
     movq $0, %rax
-    movq $0, %rdi
-    movq %r12, %rsi
-    movq $buf_sz, %rdx
+    movq %r12, %rdi
+    movq $buf, %rsi
+    movq $buf_len, %rdx
     syscall
 
-    /* store number of bytes read in r13 */
+    /* store number of bytes read */
     movq %rax, %r13
 
     /* if we read more than 0 bytes, write and try another read */
@@ -63,14 +70,13 @@ read_buf:
 
 write_buf:
     /*
-    r12 = buffer address
     r13 = bytes read from stdin
     */
 
     /* write() syscall to stdout from buf */
     movq $1, %rax
     movq $1, %rdi
-    movq %r12, %rsi
+    movq $buf, %rsi
     movq %r13, %rdx
     syscall
 

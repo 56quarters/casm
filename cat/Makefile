@@ -14,7 +14,8 @@ $(out)/cat.o: cat.S target
 	gcc -ggdb -o $(out)/cat.o -c cat.S
 
 $(out)/cat: $(out)/cat.o
-	ld --dynamic-linker $(linker) -lc -o $(out)/cat $(out)/cat.o
+#	ld --dynamic-linker $(linker) -lc -o $(out)/cat $(out)/cat.o
+	ld -o $(out)/cat $(out)/cat.o
 
 build: $(out)/cat
 
