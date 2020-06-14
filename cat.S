@@ -20,21 +20,17 @@ buf:
     .space 1024 * 128, 0x0
     buf_len = . - buf
 
-nl:
-    .asciz "\n"
-    nl_len = . - nl
-
-help:
+help_msg:
     .asciz "Help text!\n"
-    help_len = . - help
 
 help_long:
     .asciz "--help"
-    help_long_len = . - help_long
 
 help_short:
     .asciz "-h"
-    help_short_len = . - help_short
+
+error_msg_bad_file:
+    .asciz "error: could not open file\n"
 
     /** ************ **/
     /** text section **/
@@ -77,7 +73,7 @@ _start:
     movq %rax, %r14
     cmp $0, %r14
     /* exit with an error if the fd is < 0 */
-    jl .exit_error
+    jl .error_bad_file
 
     /* read just opened file descriptor, write to stdout */
     movq %r14, %rdi
@@ -95,6 +91,11 @@ _start:
     jl .read_from_argv
     /* otherwise, exit successfully since we've read all files */
     jmp .exit_success
+
+.error_bad_file:
+    lea error_msg_bad_file, %rdi
+    call eprint_c_str
+    jmp .exit_error
 
 .exit_success:
     call close_fds
@@ -152,7 +153,7 @@ read_write_buf:
      * r12 = read file descriptor
      * r13 = write file descriptor
      * r14 = bytes read
-    */
+     */
     push %r12
     push %r13
     push %r14
@@ -202,7 +203,7 @@ c_str_eq:
      * r12 = pointer to first string
      * r13 = pointer to second string
      * r14b = scratch for char pointed to by r12
-    */
+     */
     push %r12
     push %r13
     push %r14
@@ -247,7 +248,7 @@ c_str_eq:
 eprint_c_str:
     /*
      * r12 = pointer to string to print
-    */
+     */
     push %r12
     movq %rdi, %r12
 
