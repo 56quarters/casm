@@ -53,7 +53,21 @@ _start:
     movq (%rsp), %r12
     movq $1, %r13 /* start at 1, skip argv[0] */
 
-.argv_loop:
+    /* if there's only one argv value, read from stdin */
+    cmp $1, %r12
+    je .read_from_stdin
+    /* otherwise, try to open each argv[n] value as a file */
+    jmp .read_from_argv
+
+.read_from_stdin:
+    /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
+    movq $0, %rdi
+    movq $1, %rsi
+    call read_write_buf
+    jmp .exit_success
+
+.read_from_argv:
+    /* try to open() argv[n] as a file */
     movq $2, %rax
     movq 8(%rsp, %r13, 8), %rdi
     movq $0, %rsi
@@ -62,7 +76,8 @@ _start:
     /* save opened file descriptor */
     movq %rax, %r14
     cmp $0, %r14
-    jl exit_error
+    /* exit with an error if the fd is < 0 */
+    jl .exit_error
 
     /* read just opened file descriptor, write to stdout */
     movq %r14, %rdi
@@ -74,21 +89,25 @@ _start:
     movq %r14, %rdi
     syscall
 
+    /* if r13 (n) is less than argc, open the next file */
     inc %r13
     cmp %r12, %r13
-    jl .argv_loop
+    jl .read_from_argv
+    /* otherwise, exit successfully since we've read all files */
+    jmp .exit_success
 
-    /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
-    #movq $0, %rdi
-    #movq $1, %rsi
-    #call read_write_buf
-
-    /* clean up and exit */
+.exit_success:
     call close_fds
     call exit_success
 
+.exit_error:
+    call close_fds
+    call exit_error
+
+/*
+ * Close stdin, stdout, and stderr
+ */
 close_fds:
-    /* close() syscall for stdin, stdout, stderr */
     movq $3, %rax
     movq $0, %rdi
     syscall
@@ -100,6 +119,7 @@ close_fds:
     movq $3, %rax
     movq $2, %rdi
     syscall
+    ret
 
 /*
  * Exit the current process with status 0, killing all threads
@@ -109,6 +129,7 @@ exit_success:
     movq $231, %rax
     movq $0, %rdi
     syscall
+    ret
 
 /*
  * Exit the current process with status 1, killing all threads
@@ -118,6 +139,7 @@ exit_error:
     movq $231, %rax
     movq $1, %rdi
     syscall
+    ret
 
 /*
  * Read a file descriptor and write to another file descriptor until EOF
