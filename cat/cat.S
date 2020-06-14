@@ -1,27 +1,31 @@
-/*
+/********************************************************************
+ * Casm - simplified implementation of `cat` in GCC assembly.
  *
+ * Copyright 2020 TSH Labs
  *
- */
+ * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ * option. This file may not be copied, modified, or distributed
+ * except according to those terms.
+ *******************************************************************/
 
     /** ************ **/
     /** data section **/
     /** ************ **/
     .data
 
+/* 128K buffer for reads */
 buf:
-    .space 8192, 0x0
+    .space 1024 * 128, 0x0
     buf_len = . - buf
-
-notice:
-    .asciz "Reading from stdin\n"
-    notice_len = . - notice
 
 nl:
     .asciz "\n"
     nl_len = . - nl
 
 help:
-    .asciz "Help text!"
+    .asciz "Help text!\n"
     help_len = . - help
 
 help_long:
@@ -41,9 +45,16 @@ help_short:
     .global _start
 
 _start:
-    /* print notice to stderr */
-    lea notice, %rdi
-    call eprint_c_str
+    movq (%rsp), %r12
+
+    /*
+    ;; store argc somewhere
+    ;; loop while n less than argc
+    ;; take argv[n] and use as argument to open()
+    ;; use fd from open for read_write_buf
+    ;; close fd
+    ;; jump to start of loop
+    */
 
     /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
     movq $0, %rdi
@@ -68,6 +79,9 @@ close_fds:
     mov $2, %rdi
     syscall
 
+/*
+ * Exit the current process with status 0, killing all threads
+ */
 exit_success:
     /* exit_group() syscall with status 0 */
     movq $231, %rax
@@ -75,6 +89,17 @@ exit_success:
     syscall
 
 /*
+ * Exit the current process with status 1, killing all threads
+ */
+exit_error:
+    /* exit_group() syscall with status 1 */
+    movq $231, %rax
+    movq $1, %rdi
+    syscall
+
+/*
+ * Read a file descriptor and write to another file descriptor until EOF
+ *
  * rdi = read file descriptor
  * rsi = write file descriptor
  */
@@ -101,7 +126,7 @@ read_write_buf:
     /* if we read 0 bytes, exit */
     movq $0, %rax
     cmp %r14, %rax
-    je .end
+    je .end_read_buf
 
     /* write() syscall to stdout from buf */
     movq $1, %rax
@@ -111,10 +136,51 @@ read_write_buf:
     syscall
     jmp .read_buf
 
-.end:
+.end_read_buf:
     ret
 
 /*
+ * Return 0 if two c strings (null terminated) are equal, 1 otherwise
+ *
+ * rdi = pointer to first c string
+ * rsi = pointer to second c string
+ * rax = return
+ */
+c_str_eq:
+    /*
+     * r12 = pointer to first string
+     * r13 = pointer to second string
+     * r14b = scratch for char pointed to by r12
+     */
+    movq %rdi, %r12
+    movq %rsi, %r13
+
+.cmp_byte:
+    /* if the current char isn't the same, not equal */
+    mov (%r12), %r14b
+    cmp %r14b, (%r13)
+    jne .end_not_eq
+
+    /* if the current char is null (we already know this holds for both strings), equal */
+    cmpb $0, (%r12)
+    je .end_eq
+
+    /* otherwise, try the next byte */
+    inc %r12
+    inc %r13
+    jmp .cmp_byte
+
+.end_not_eq:
+    movq $1, %rax
+    ret
+
+.end_eq:
+    movq $0, %rax
+    ret
+
+/*
+ * Print the contents of a c string (null terminated) to stderr
+ *
  * rdi = pointer to c string to print
  */
 eprint_c_str:
