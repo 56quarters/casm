@@ -1,5 +1,5 @@
 /********************************************************************
- * Casm - simplified implementation of `cat` in GCC assembly.
+ * Casm - bare bones implementation of `cat` in GNU assembly.
  *
  * Copyright 2020 TSH Labs
  *
@@ -40,8 +40,18 @@ error_msg_bad_file:
 
     .global _start
 
+/*
+ * Entry point - read from stdin or several files and write to stdout.
+ *
+ * Exit when EOF is recieved on stdin or when all files (passed via argv) have
+ * been read. If any file cannot be read, this program with exit with an error
+ * (non-zero) status.
+ */
 _start:
     /*
+     * (rsp) = argc
+     * (rsp + 8 + 8 * n ) = argv[n]
+     *
      * r12 = argc
      * r13 = n loop variable
      * r14 = current file descriptor
