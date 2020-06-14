@@ -61,8 +61,8 @@ _start:
 
     /* save opened file descriptor */
     movq %rax, %r14
-    cmp $-1, %r14
-    je exit_error
+    cmp $0, %r14
+    jl exit_error
 
     /* read just opened file descriptor, write to stdout */
     movq %r14, %rdi
