@@ -45,21 +45,43 @@ help_short:
     .global _start
 
 _start:
-    movq (%rsp), %r12
-
     /*
-    ;; store argc somewhere
-    ;; loop while n less than argc
-    ;; take argv[n] and use as argument to open()
-    ;; use fd from open for read_write_buf
-    ;; close fd
-    ;; jump to start of loop
-    */
+     * r12 = argc
+     * r13 = n loop variable
+     * r14 = current file descriptor
+     */
+    movq (%rsp), %r12
+    movq $1, %r13 /* start at 1, skip argv[0] */
 
-    /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
-    movq $0, %rdi
+.argv_loop:
+    movq $2, %rax
+    movq 8(%rsp, %r13, 8), %rdi
+    movq $0, %rsi
+    syscall
+
+    /* save opened file descriptor */
+    movq %rax, %r14
+    cmp $-1, %r14
+    je exit_error
+
+    /* read just opened file descriptor, write to stdout */
+    movq %r14, %rdi
     movq $1, %rsi
     call read_write_buf
+
+    /* close file descriptor */
+    movq $3, %rax
+    movq %r14, %rdi
+    syscall
+
+    inc %r13
+    cmp %r12, %r13
+    jl .argv_loop
+
+    /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
+    #movq $0, %rdi
+    #movq $1, %rsi
+    #call read_write_buf
 
     /* clean up and exit */
     call close_fds
@@ -67,16 +89,16 @@ _start:
 
 close_fds:
     /* close() syscall for stdin, stdout, stderr */
-    mov $3, %rax
-    mov $0, %rdi
+    movq $3, %rax
+    movq $0, %rdi
     syscall
 
-    mov $3, %rax
-    mov $1, %rdi
+    movq $3, %rax
+    movq $1, %rdi
     syscall
 
-    mov $3, %rax
-    mov $2, %rdi
+    movq $3, %rax
+    movq $2, %rdi
     syscall
 
 /*
@@ -108,7 +130,11 @@ read_write_buf:
      * r12 = read file descriptor
      * r13 = write file descriptor
      * r14 = bytes read
-     */
+    */
+    push %r12
+    push %r13
+    push %r14
+
     movq %rdi, %r12
     movq %rsi, %r13
 
@@ -137,6 +163,9 @@ read_write_buf:
     jmp .read_buf
 
 .end_read_buf:
+    pop %r14
+    pop %r13
+    pop %r12
     ret
 
 /*
@@ -151,7 +180,11 @@ c_str_eq:
      * r12 = pointer to first string
      * r13 = pointer to second string
      * r14b = scratch for char pointed to by r12
-     */
+    */
+    push %r12
+    push %r13
+    push %r14
+
     movq %rdi, %r12
     movq %rsi, %r13
 
@@ -172,10 +205,16 @@ c_str_eq:
 
 .end_not_eq:
     movq $1, %rax
-    ret
+    jmp .end
 
 .end_eq:
     movq $0, %rax
+    jmp .end
+
+.end:
+    pop %r14
+    pop %r13
+    pop %r12
     ret
 
 /*
@@ -186,7 +225,8 @@ c_str_eq:
 eprint_c_str:
     /*
      * r12 = pointer to string to print
-     */
+    */
+    push %r12
     movq %rdi, %r12
 
 .find_null:
@@ -208,4 +248,6 @@ eprint_c_str:
     movq $2, %rdi               /* file descriptor 0 into rdi */
     movq %r12, %rdx             /* computed string length into rdx */
     syscall
+
+    pop %r12
     ret
