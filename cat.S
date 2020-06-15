@@ -186,13 +186,13 @@ open_file:
 close_file:
     /* if the fd is stdin, don't close it */
     cmp $0, %rdi
-    je .end_close_fd
+    je .end_close_file
 
     /* otherwise, try to close it */
     movq $3, %rax
     syscall
 
-.end_close_fd:
+.end_close_file:
     ret
 
 /**
