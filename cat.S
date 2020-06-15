@@ -278,7 +278,7 @@ eprint_c_str:
     that we're still using */
     movq $1, %rax               /* syscall */
     movq %rdi, %rsi             /* buffer pointed to by rdi into rsi before we need to use rdi */
-    movq $2, %rdi               /* file descriptor 0 into rdi */
+    movq $2, %rdi               /* stderr file descriptor into rdi */
     movq %r12, %rdx             /* computed string length into rdx */
     syscall
 
