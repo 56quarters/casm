@@ -21,16 +21,22 @@ buf:
     buf_len = . - buf
 
 help_msg:
-    .asciz "Help text!\n"
+    .asciz "\
+Usage: cat [OPTION]... [FILE]...\n\
+\n\
+Concatenate FILE(s) to standard output.\n\
+\n\
+When no FILE is provided, read from standard input.\n\
+\n\
+Options:\n\
+\t--help\tShow this help\n\
+"
 
 help_long:
     .asciz "--help"
 
-help_short:
-    .asciz "-h"
-
 error_msg_bad_file:
-    .asciz "error: could not open file\n"
+    .asciz "error: could not open file. try `--help`\n"
 
     /** ************ **/
     /** text section **/
@@ -62,8 +68,8 @@ _start:
     /* if there's only one argv value, read from stdin */
     cmp $1, %r12
     je .read_from_stdin
-    /* otherwise, try to open each argv[n] value as a file */
-    jmp .read_from_argv
+    /* otherwise, try to parse CLI flags or just open each argv[n] value as a file */
+    jmp .parse_cli_flags
 
 .read_from_stdin:
     /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
@@ -71,6 +77,23 @@ _start:
     movq $1, %rsi
     call read_write_buf
     jmp .exit_success
+
+.parse_cli_flags:
+    /* compare argv[n] to "--help" */
+    movq 8(%rsp, %r13, 8), %rdi
+    lea help_long, %rsi
+    call c_str_eq
+    cmp $0, %rax
+    je .show_help
+
+    /* if n is less than argc, try the next argument */
+    inc %r13
+    cmp %r12, %r13
+    jl .parse_cli_flags
+
+    /* we've parsed all CLI flags looking for "--help", try opening files */
+    movq $1, %r13 /* reset n */
+    jmp .read_from_argv
 
 .read_from_argv:
     /* try to open() argv[n] as a file */
@@ -95,11 +118,17 @@ _start:
     movq %r14, %rdi
     syscall
 
-    /* if r13 (n) is less than argc, open the next file */
+    /* if n is less than argc, open the next file */
     inc %r13
     cmp %r12, %r13
     jl .read_from_argv
+
     /* otherwise, exit successfully since we've read all files */
+    jmp .exit_success
+
+.show_help:
+    lea help_msg, %rdi
+    call eprint_c_str
     jmp .exit_success
 
 .error_bad_file:
