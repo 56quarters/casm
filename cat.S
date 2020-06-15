@@ -26,7 +26,7 @@ Usage: cat [OPTION]... [FILE]...\n\
 \n\
 Concatenate FILE(s) to standard output.\n\
 \n\
-When no FILE is provided, read from standard input.\n\
+When no FILE is provided or when FILE is -, read from standard input.\n\
 \n\
 Options:\n\
 \t--help\tShow this help\n\
@@ -34,6 +34,9 @@ Options:\n\
 
 help_long:
     .asciz "--help"
+
+stdin_file:
+    .asciz "-"
 
 error_msg_bad_file:
     .asciz "error: could not open file. try `--help`\n"
@@ -96,11 +99,9 @@ _start:
     jmp .read_from_argv
 
 .read_from_argv:
-    /* try to open() argv[n] as a file */
-    movq $2, %rax
+    /* try to open() argv[n] as a file or stdin for the name "-" */
     movq 8(%rsp, %r13, 8), %rdi
-    movq $0, %rsi
-    syscall
+    call open_file
 
     /* save opened file descriptor */
     movq %rax, %r14
@@ -143,6 +144,40 @@ _start:
 .exit_error:
     call close_fds
     call exit_error
+
+/*
+ * Open a file of the given name or stdin if the file is "-"
+ *
+ * rdi = pointer to file name
+ * rax = file descriptor
+ */
+open_file:
+    push %r12
+    movq %rdi, %r12
+
+    /* compare the given file name to "-" to see if we should read from stdin */
+    lea stdin_file, %rsi
+    call c_str_eq
+    cmp $0, %rax
+    je .open_stdin
+
+    /* otherwise try to open it as a normal file name */
+    jmp .open_name
+
+.open_name:
+    movq $2, %rax
+    movq %r12, %rdi
+    movq $0, %rsi
+    syscall /* let the return here (rax) persist until we return */
+    jmp .end_open_file
+
+.open_stdin:
+    movq $0, %rax
+    jmp .end_open_file
+
+.end_open_file:
+    pop %r12
+    ret
 
 /*
  * Close stdin, stdout, and stderr
