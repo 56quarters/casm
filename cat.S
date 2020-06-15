@@ -49,7 +49,7 @@ error_msg_bad_file:
 
     .global _start
 
-/*
+/**
  * Entry point - read from stdin or several files and write to stdout.
  *
  * Exit when EOF is recieved on stdin or when all files (passed via argv) have
@@ -115,9 +115,8 @@ _start:
     call read_write_buf
 
     /* close file descriptor */
-    movq $3, %rax
     movq %r14, %rdi
-    syscall
+    call close_file
 
     /* if n is less than argc, open the next file */
     inc %r13
@@ -145,7 +144,7 @@ _start:
     call close_fds
     call exit_error
 
-/*
+/**
  * Open a file of the given name or stdin if the file is "-"
  *
  * rdi = pointer to file name
@@ -179,7 +178,24 @@ open_file:
     pop %r12
     ret
 
-/*
+/**
+ * Close the given file descriptor if it isn't stdin (fd 0)
+ *
+ * rdi = file descriptor
+ */
+close_file:
+    /* if the fd is stdin, don't close it */
+    cmp $0, %rdi
+    je .end_close_fd
+
+    /* otherwise, try to close it */
+    movq $3, %rax
+    syscall
+
+.end_close_fd:
+    ret
+
+/**
  * Close stdin, stdout, and stderr
  */
 close_fds:
@@ -196,7 +212,7 @@ close_fds:
     syscall
     ret
 
-/*
+/**
  * Exit the current process with status 0, killing all threads
  */
 exit_success:
@@ -206,7 +222,7 @@ exit_success:
     syscall
     ret
 
-/*
+/**
  * Exit the current process with status 1, killing all threads
  */
 exit_error:
@@ -216,7 +232,7 @@ exit_error:
     syscall
     ret
 
-/*
+/**
  * Read a file descriptor and write to another file descriptor until EOF
  *
  * rdi = read file descriptor
@@ -265,7 +281,7 @@ read_write_buf:
     pop %r12
     ret
 
-/*
+/**
  * Return 0 if two c strings (null terminated) are equal, 1 otherwise
  *
  * rdi = pointer to first c string
@@ -314,7 +330,7 @@ c_str_eq:
     pop %r12
     ret
 
-/*
+/**
  * Print the contents of a c string (null terminated) to stderr
  *
  * rdi = pointer to c string to print
