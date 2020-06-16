@@ -1,5 +1,5 @@
 /********************************************************************
- * Casm - bare bones implementation of `cat` in GNU assembly.
+ * Casm - some core utilities implemented in GNU assembly.
  *
  * Copyright 2020 Nick Pillitteri
  *
@@ -267,7 +267,7 @@ read_write_buf:
     movq %rsi, %r13
 
 .read_buf:
-    /* read() syscall from stdin */
+    /* read() syscall from input file descriptor */
     movq $0, %rax
     movq %r12, %rdi
     movq $buf, %rsi
@@ -283,7 +283,7 @@ read_write_buf:
     /* otherwise, attempt to write the results */
 
 .write_buf:
-    /* write() syscall to stdout from buf */
+    /* write() syscall to output file descriptor from buf */
     movq $1, %rax
     movq %r13, %rdi
     movq %r15, %rsi
