@@ -10,12 +10,12 @@ I suddenly found myself with a lot of free time.
 
 ## Is it at least really fast?
 
-No. It's about as fast as GNU `cat` in my testing except with far
+No. It's about as fast as GNU `cat` in my limited testing except with far
 fewer features and far less portable.
 
 ## Should I use this?
 
-No.
+Absolutely not.
 
 ## But how would I use it?
 
