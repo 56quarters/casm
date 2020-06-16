@@ -42,7 +42,7 @@ error_msg_bad_open:
     .asciz "cat: could not open file\n"
 
 error_msg_bad_write:
-    .asciz "cat: write error\n"
+    .asciz "cat: read/write error\n"
 
     /** ************ **/
     /** text section **/
@@ -256,10 +256,12 @@ read_write_buf:
      * r12 = read file descriptor
      * r13 = write file descriptor
      * r14 = bytes read
+     * r15 = buffer address + offset
      */
     push %r12
     push %r13
     push %r14
+    push %r15
 
     movq %rdi, %r12
     movq %rsi, %r13
@@ -272,27 +274,30 @@ read_write_buf:
     movq $buf_len, %rdx
     syscall
 
-    /* store number of bytes read */
-    movq %rax, %r14
+    movq %rax, %r14 /* number of bytes read */
+    movq $buf, %r15 /* address of the buffer to write */
 
-    /* if we read 0 bytes, exit */
-    movq $0, %rax
-    cmp %r14, %rax
-    je .end_success
+    cmp $0, %r14
+    jl .end_error   /* if bytes read is < 0, error */
+    je .end_success /* if bytes read = 0, end */
+    /* otherwise, attempt to write the results */
 
+.write_buf:
     /* write() syscall to stdout from buf */
     movq $1, %rax
     movq %r13, %rdi
-    movq $buf, %rsi
+    movq %r15, %rsi
     movq %r14, %rdx
     syscall
 
-    /* if we didn't write all bytes out, error */
-    cmp %r14, %rax
-    jne .end_error
+    cmp $0, %rax
+    jl .end_error /* if bytes written < 0, error */
 
-    /* otherwise, read again */
-    jmp .read_buf
+    sub %rax, %r14 /* subtract bytes written from bytes to write */
+    add %rax, %r15 /* add bytes written to the buffer offset */
+    cmp $0, %r14
+    jg .write_buf /* write again if we didn't write everything we read before */
+    jmp .read_buf /* otherwise, attempt another read + write */
 
 .end_success:
     movq $0, %rax
@@ -303,6 +308,7 @@ read_write_buf:
     jmp .end_read_buf
 
 .end_read_buf:
+    pop %r15
     pop %r14
     pop %r13
     pop %r12
