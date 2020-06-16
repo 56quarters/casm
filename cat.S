@@ -38,8 +38,11 @@ help_long:
 stdin_file:
     .asciz "-"
 
-error_msg_bad_file:
-    .asciz "error: could not open file. try `--help`\n"
+error_msg_bad_open:
+    .asciz "cat: could not open file\n"
+
+error_msg_bad_write:
+    .asciz "cat: write error\n"
 
     /** ************ **/
     /** text section **/
@@ -79,6 +82,8 @@ _start:
     movq $0, %rdi
     movq $1, %rsi
     call read_write_buf
+    cmp $0, %rax
+    jne .error_write
     jmp .exit_success
 
 .parse_cli_flags:
@@ -107,12 +112,14 @@ _start:
     movq %rax, %r14
     cmp $0, %r14
     /* exit with an error if the fd is < 0 */
-    jl .error_bad_file
+    jl .error_bad_open
 
     /* read just opened file descriptor, write to stdout */
     movq %r14, %rdi
     movq $1, %rsi
     call read_write_buf
+    cmp $0, %rax
+    jne .error_write
 
     /* close file descriptor */
     movq %r14, %rdi
@@ -131,8 +138,13 @@ _start:
     call eprint_c_str
     jmp .exit_success
 
-.error_bad_file:
-    lea error_msg_bad_file, %rdi
+.error_bad_open:
+    lea error_msg_bad_open, %rdi
+    call eprint_c_str
+    jmp .exit_error
+
+.error_write:
+    lea error_msg_bad_write, %rdi
     call eprint_c_str
     jmp .exit_error
 
@@ -237,6 +249,7 @@ exit_error:
  *
  * rdi = read file descriptor
  * rsi = write file descriptor
+ * rax = return 0 for success, 1 for error
  */
 read_write_buf:
     /*
@@ -265,7 +278,7 @@ read_write_buf:
     /* if we read 0 bytes, exit */
     movq $0, %rax
     cmp %r14, %rax
-    je .end_read_buf
+    je .end_success
 
     /* write() syscall to stdout from buf */
     movq $1, %rax
@@ -273,7 +286,21 @@ read_write_buf:
     movq $buf, %rsi
     movq %r14, %rdx
     syscall
+
+    /* if we didn't write all bytes out, error */
+    cmp %r14, %rax
+    jne .end_error
+
+    /* otherwise, read again */
     jmp .read_buf
+
+.end_success:
+    movq $0, %rax
+    jmp .end_read_buf
+
+.end_error:
+    movq $1, %rax
+    jmp .end_read_buf
 
 .end_read_buf:
     pop %r14
