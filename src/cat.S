@@ -66,11 +66,9 @@ _start:
     movq (%rsp), %r12
     movq $1, %r13 /* start at 1, skip argv[0] */
 
-    /* if there's only one argv value, read from stdin */
     cmp $1, %r12
-    je .read_from_stdin
-    /* otherwise, try to parse CLI flags or just open each argv[n] value as a file */
-    jmp .parse_cli_flags
+    je .read_from_stdin  /* if there's only one argv value, read from stdin */
+    jmp .parse_cli_flags /* otherwise, parse CLI flags and read files */
 
 .read_from_stdin:
     /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
@@ -130,7 +128,7 @@ _start:
 
 .show_help:
     lea help_msg, %rdi
-    call eprint_c_str
+    call print_c_str
     jmp .exit_success
 
 .error_bad_open:

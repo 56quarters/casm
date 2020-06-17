@@ -14,7 +14,7 @@
 
     .text
 
-    .global c_str_eq, close_std_fds, eprint_c_str, exit_error, exit_success
+    .global c_str_eq, close_std_fds, copy_c_str, eprint_c_str, exit_error, exit_success, print_c_str
 
 /**
  * Close stdin, stdout, and stderr
@@ -102,17 +102,22 @@ c_str_eq:
     pop %r12
     ret
 
+
 /**
- * Print the contents of a c string (null terminated) to stderr
+ * Write the contents of a c string (null terminated) to the given file descriptor
  *
  * rdi = pointer to c string to print
+ * rsi = file descriptor
  */
-eprint_c_str:
+write_c_str:
     /*
      * r12 = pointer to string to print
+     * r13 = file descriptor
      */
     push %r12
+    push %r13
     movq %rdi, %r12
+    movq %rsi, %r13
 
 .find_null:
     /* compare where r12 is pointing to null byte, end if equal */
@@ -128,11 +133,68 @@ eprint_c_str:
     /* write() syscall to print the string. note that these instructions don't
     match the order of arguments to write() in order to avoid clobbering registers
     that we're still using */
-    movq $1, %rax               /* syscall */
-    movq %rdi, %rsi             /* buffer pointed to by rdi into rsi before we need to use rdi */
-    movq $2, %rdi               /* stderr file descriptor into rdi */
-    movq %r12, %rdx             /* computed string length into rdx */
+    movq $1, %rax   /* syscall */
+    movq %rdi, %rsi /* buffer pointed to by rdi into rsi before we need to use rdi */
+    movq %r13, %rdi /* file descriptor into rdi */
+    movq %r12, %rdx /* computed string length into rdx */
     syscall
 
+    pop %r13
+    pop %r12
+    ret
+
+/**
+ * Print the contents of a c string (null terminated) to stdout
+ *
+ * rdi = pointer to c string to print
+ */
+print_c_str:
+    movq $1, %rsi
+    call write_c_str
+    ret
+
+/**
+ * Print the contents of a c string (null terminated) to stderr
+ *
+ * rdi = pointer to c string to print
+ */
+eprint_c_str:
+    movq $2, %rsi
+    call write_c_str
+    ret
+
+/**
+ * Copy the contents of a c string (null terminated) to a given buffer, omitting the null byte
+ *
+ * rdi = pointer to the c string to copy
+ * rsi = pointer to the buffer to copy into
+ * rax = return, the length of the c string copied not including the null byte
+ */
+copy_c_str:
+    push %r12 /* source */
+    push %r13 /* dest */
+    push %r14 /* tmp */
+    push %r15 /* length */
+
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movq $0, %r15
+
+.copy_byte:
+    movb (%r12), %r14b
+    cmp $0, %r14b
+    je .end_copy_c_str
+
+    movb %r14b, (%r13)
+    inc %r12
+    inc %r13
+    inc %r15
+    jmp .copy_byte
+
+.end_copy_c_str:
+    movq %r15, %rax
+    pop %r15
+    pop %r14
+    pop %r13
     pop %r12
     ret

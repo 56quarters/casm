@@ -16,4 +16,8 @@ $(out)/cat: $(out)/lib.o $(src)/cat.S
 	gcc -ggdb -o $(out)/cat.o -c $(src)/cat.S
 	ld -o $(out)/cat $(out)/lib.o $(out)/cat.o
 
-build: target $(out)/cat
+$(out)/echo: $(out)/lib.o $(src)/echo.S
+	gcc -ggdb -o $(out)/echo.o -c $(src)/echo.S
+	ld -o $(out)/echo $(out)/lib.o $(out)/echo.o
+
+build: target $(out)/cat $(out)/echo
