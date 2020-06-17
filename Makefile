@@ -9,8 +9,11 @@ clean:
 target:
 	mkdir -p $(out)
 
-$(out)/cat: $(src)/cat.S target
-	gcc -ggdb -o $(out)/cat.o -c $(src)/cat.S
-	ld -o $(out)/cat $(out)/cat.o
+$(out)/lib.o: $(src)/lib.S
+	gcc -ggdb -o $(out)/lib.o -c $(src)/lib.S
 
-build: $(out)/cat
+$(out)/cat: $(out)/lib.o $(src)/cat.S
+	gcc -ggdb -o $(out)/cat.o -c $(src)/cat.S
+	ld -o $(out)/cat $(out)/lib.o $(out)/cat.o
+
+build: target $(out)/cat
