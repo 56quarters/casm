@@ -14,7 +14,7 @@
 
     .text
 
-    .global c_str_eq, close_std_fds, copy_c_str, eprint_c_str, exit_error, exit_success, print_c_str
+    .global c_str_eq, close_std_fds, eprint_c_str, exit_error, exit_success, print_c_str
 
 /**
  * Close stdin, stdout, and stderr
@@ -161,40 +161,4 @@ print_c_str:
 eprint_c_str:
     movq $2, %rsi
     call write_c_str
-    ret
-
-/**
- * Copy the contents of a c string (null terminated) to a given buffer, omitting the null byte
- *
- * rdi = pointer to the c string to copy
- * rsi = pointer to the buffer to copy into
- * rax = return, the length of the c string copied not including the null byte
- */
-copy_c_str:
-    push %r12 /* source */
-    push %r13 /* dest */
-    push %r14 /* tmp */
-    push %r15 /* length */
-
-    movq %rdi, %r12
-    movq %rsi, %r13
-    movq $0, %r15
-
-.copy_byte:
-    movb (%r12), %r14b
-    cmp $0, %r14b
-    je .end_copy_c_str
-
-    movb %r14b, (%r13)
-    inc %r12
-    inc %r13
-    inc %r15
-    jmp .copy_byte
-
-.end_copy_c_str:
-    movq %r15, %rax
-    pop %r15
-    pop %r14
-    pop %r13
-    pop %r12
     ret

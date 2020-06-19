@@ -37,9 +37,6 @@ newline:
 space:
     .asciz " "
 
-hello:
-    .asciz "echo: hello from echo\n"
-
     .text
 
     .global _start
@@ -62,7 +59,7 @@ _start:
 
     cmp $1, %r12
      /* if there are no args, jump to the end which just prints a newline */
-    je .print_buffer
+    je .print_buffer_newline
     jmp .parse_cli_flags
 
 .parse_cli_flags:
@@ -99,8 +96,14 @@ _start:
     inc %r13
     cmp %r12, %r13
     jl .read_from_argv_space
-    jmp .print_buffer
+    jmp .print_buffer_newline
 
+.print_buffer_newline:
+    /* add a newline to the buffer before printing */
+    lea newline, %rdi
+    movq %r14, %rsi
+    call copy_c_str
+    /* fall through to print the buffer */
 .print_buffer:
     /* Note that we haven't been copying the null bytes at the ends of strings
        into the buffer and we don't add one here before trying to print. This
@@ -108,10 +111,6 @@ _start:
        as soon as we get to the end of bytes we've written, it's null */
     lea buf, %rdi
     call print_c_str
-
-    lea newline, %rdi
-    call print_c_str
-
     jmp .exit_success
 
 .show_help:
@@ -122,3 +121,39 @@ _start:
 .exit_success:
     call close_std_fds
     call exit_success
+
+/**
+ * Copy the contents of a c string (null terminated) to a given buffer, omitting the null byte
+ *
+ * rdi = pointer to the c string to copy
+ * rsi = pointer to the buffer to copy into
+ * rax = return, the length of the c string copied not including the null byte
+ */
+copy_c_str:
+    push %r12 /* source */
+    push %r13 /* dest */
+    push %r14 /* tmp */
+    push %r15 /* length */
+
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movq $0, %r15
+
+.copy_byte:
+    movb (%r12), %r14b
+    cmp $0, %r14b
+    je .end_copy_c_str
+
+    movb %r14b, (%r13)
+    inc %r12
+    inc %r13
+    inc %r15
+    jmp .copy_byte
+
+.end_copy_c_str:
+    movq %r15, %rax
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
