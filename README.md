@@ -1,6 +1,6 @@
 # Casm
 
-Some core utilities implemented in GNU assembly.
+Some core utilities implemented in GNU assembly (AT&T syntax).
 
 Only supports x86-64 on GNU/Linux.
 
