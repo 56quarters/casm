@@ -20,16 +20,15 @@ buf:
     buf_len = . - buf
 
 help_msg:
-    .asciz "\
-Usage: cat [OPTION]... [FILE]...\n\
-\n\
-Concatenate FILE(s) to standard output.\n\
-\n\
-When no FILE is provided or when FILE is -, read from standard input.\n\
-\n\
-Options:\n\
-\t--help\tShow this help\n\
-"
+    .ascii "Usage: cat [OPTION]... [FILE]...\n"
+    .ascii "\n"
+    .ascii "Concatenate FILE(s) to standard output.\n"
+    .ascii "\n"
+    .ascii "When no FILE is provided or when FILE is -, read from standard input.\n"
+    .ascii "\n"
+    .ascii "Options:\n"
+    .ascii "\t--help\tShow this help\n"
+    .byte  0
 
 help_long:
     .asciz "--help"

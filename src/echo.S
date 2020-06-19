@@ -20,14 +20,13 @@ buf:
     buf_len = . - buf
 
 help_msg:
-    .asciz "\
-Usage: echo [OPTION]... [STRING]...\n\
-\n\
-Echo STRING(s) to standard output.\n\
-\n\
-Options:\n\
-\t--help\tShow this help\n\
-"
+    .ascii "Usage: echo [OPTION]... [STRING]...\n"
+    .ascii "\n"
+    .ascii "Echo STRING(s) to standard output.\n"
+    .ascii "\n"
+    .ascii "Options:\n"
+    .ascii "\t--help\tShow this help\n"
+    .byte  0
 
 help_long:
     .asciz "--help"
