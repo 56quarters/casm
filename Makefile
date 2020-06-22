@@ -25,8 +25,12 @@ $(out)/false: $(out)/lib.o $(src)/false.S
 	$(cc) -o $(out)/false.o -c $(src)/false.S
 	ld -o $(out)/false $(out)/lib.o $(out)/false.o
 
+$(out)/sync: $(out)/lib.o $(src)/sync.S
+	$(cc) -o $(out)/sync.o -c $(src)/sync.S
+	ld -o $(out)/sync $(out)/lib.o $(out)/sync.o
+
 $(out)/true: $(out)/lib.o $(src)/true.S
 	$(cc) -o $(out)/true.o -c $(src)/true.S
 	ld -o $(out)/true $(out)/lib.o $(out)/true.o
 
-build: target $(out)/cat $(out)/echo $(out)/false $(out)/true
+build: target $(out)/cat $(out)/echo $(out)/false $(out)/sync $(out)/true
