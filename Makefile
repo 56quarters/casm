@@ -1,6 +1,6 @@
 out := target
 src := src
-cc := gcc
+cc := gcc -ggdb
 
 default: build
 

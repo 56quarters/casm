@@ -35,34 +35,22 @@ help_long:
  */
 _start:
     /*
-     * (rsp) = argc
-     * (rsp + 8 + 8 * n ) = argv[n]
-     *
      * r12 = argc
-     * r13 = n loop variable
      */
     movq (%rsp), %r12
-    movq $1, %r13 /* start at 1, skip argv[0] */
 
     cmp $1, %r12
     je .exit_error  /* if there's only one argv value, exit */
     jmp .parse_cli_flags /* otherwise, parse CLI flags */
 
 .parse_cli_flags:
-    /* compare argv[n] to "--help" */
-    movq 8(%rsp, %r13, 8), %rdi
+    /* check for a "--help" flag or just exit */
+    movq %rsp, %rdi
     lea help_long, %rsi
-    call c_str_eq
-    cmp $0, %rax
+    call cli_flag_exists
+
+    cmp $1, %rax
     je .show_help
-
-    /* if n is less than argc, try the next argument */
-    inc %r13
-    cmp %r12, %r13
-    jl .parse_cli_flags
-
-    /* we've parsed all CLI flags looking for "--help", exit */
-    movq $1, %r13 /* reset n */
     jmp .exit_error
 
 .show_help:

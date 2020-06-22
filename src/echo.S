@@ -63,20 +63,13 @@ _start:
     jmp .parse_cli_flags
 
 .parse_cli_flags:
-    /* compare argv[n] to "--help" */
-    movq 8(%rsp, %r13, 8), %rdi
+    /* check for a "--help" flag */
+    movq %rsp, %rdi
     lea help_long, %rsi
-    call c_str_eq
-    cmp $0, %rax
+    call cli_flag_exists
+
+    cmp $1, %rax
     je .show_help
-
-    /* if n is less than argc, try the next argument */
-    inc %r13
-    cmp %r12, %r13
-    jl .parse_cli_flags
-
-    /* we've parsed all CLI flags looking for "--help", try printing things */
-    movq $1, %r13 /* reset n */
     jmp .read_from_argv
 
 .read_from_argv_space:
