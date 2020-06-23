@@ -37,6 +37,9 @@ newline:
 space:
     .asciz " "
 
+error_msg_bad_write:
+    .asciz "echo: write error\n"
+
     .text
 
     .global _start
@@ -105,12 +108,25 @@ _start:
        as soon as we get to the end of bytes we've written, it's null */
     lea buf, %rdi
     call c_str_print
+
+    /* if we coudln't print to stdout, print to stderr and exit */
+    cmp $0, %rax
+    jl .error_write
     jmp .exit_success
 
 .show_help:
     lea help_msg, %rdi
     call c_str_print
     jmp .exit_success
+
+.error_write:
+    lea error_msg_bad_write, %rdi
+    call c_str_eprint
+    jmp .exit_error
+
+.exit_error:
+    call close_std_fds
+    call exit_error
 
 .exit_success:
     call close_std_fds

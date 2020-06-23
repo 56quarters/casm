@@ -1,5 +1,6 @@
 out := target
 src := src
+libs := $(out)/libproc.o $(out)/libstr.o
 cc := gcc -ggdb
 
 default: build
@@ -10,27 +11,34 @@ clean:
 target:
 	mkdir -p $(out)
 
-$(out)/lib.o: $(src)/lib.S
-	$(cc) -o $(out)/lib.o -c $(src)/lib.S
+$(out)/libproc.o: $(src)/libproc.S
+	$(cc) -o $(out)/libproc.o -c $(src)/libproc.S
 
-$(out)/cat: $(out)/lib.o $(src)/cat.S
+$(out)/libstr.o: $(src)/libstr.S
+	$(cc) -o $(out)/libstr.o -c $(src)/libstr.S
+
+$(out)/cat: $(libs) $(src)/cat.S
 	$(cc) -o $(out)/cat.o -c $(src)/cat.S
-	ld -o $(out)/cat $(out)/lib.o $(out)/cat.o
+	ld -o $(out)/cat $(libs) $(out)/cat.o
 
-$(out)/echo: $(out)/lib.o $(src)/echo.S
+$(out)/echo: $(libs) $(src)/echo.S
 	$(cc) -o $(out)/echo.o -c $(src)/echo.S
-	ld -o $(out)/echo $(out)/lib.o $(out)/echo.o
+	ld -o $(out)/echo $(libs) $(out)/echo.o
 
-$(out)/false: $(out)/lib.o $(src)/false.S
+$(out)/false: $(libs) $(src)/false.S
 	$(cc) -o $(out)/false.o -c $(src)/false.S
-	ld -o $(out)/false $(out)/lib.o $(out)/false.o
+	ld -o $(out)/false $(libs) $(out)/false.o
 
-$(out)/sync: $(out)/lib.o $(src)/sync.S
+$(out)/sync: $(libs) $(src)/sync.S
 	$(cc) -o $(out)/sync.o -c $(src)/sync.S
-	ld -o $(out)/sync $(out)/lib.o $(out)/sync.o
+	ld -o $(out)/sync $(libs) $(out)/sync.o
 
-$(out)/true: $(out)/lib.o $(src)/true.S
+$(out)/true: $(libs) $(src)/true.S
 	$(cc) -o $(out)/true.o -c $(src)/true.S
-	ld -o $(out)/true $(out)/lib.o $(out)/true.o
+	ld -o $(out)/true $(libs) $(out)/true.o
 
-build: target $(out)/cat $(out)/echo $(out)/false $(out)/sync $(out)/true
+$(out)/yes: $(libs) $(src)/yes.S
+	$(cc) -o $(out)/yes.o -c $(src)/yes.S
+	ld -o $(out)/yes $(libs) $(out)/yes.o
+
+build: target $(out)/cat $(out)/echo $(out)/false $(out)/sync $(out)/true $(out)/yes

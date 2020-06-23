@@ -10,49 +10,11 @@
  * except according to those terms.
  *******************************************************************/
 
-    /* common methods */
+    /* string methods */
 
     .text
 
     .global c_str_copy, c_str_eprint, c_str_eq, c_str_len, c_str_print
-    .global cli_flag_exists, close_std_fds, exit_success, exit_error
-
-/**
- * Close stdin, stdout, and stderr
- */
-close_std_fds:
-    movq $3, %rax
-    movq $0, %rdi
-    syscall
-
-    movq $3, %rax
-    movq $1, %rdi
-    syscall
-
-    movq $3, %rax
-    movq $2, %rdi
-    syscall
-    ret
-
-/**
- * Exit the current process with status 0, killing all threads
- */
-exit_success:
-    /* exit_group() syscall with status 0 */
-    movq $231, %rax
-    movq $0, %rdi
-    syscall
-    ret
-
-/**
- * Exit the current process with status 1, killing all threads
- */
-exit_error:
-    /* exit_group() syscall with status 1 */
-    movq $231, %rax
-    movq $1, %rdi
-    syscall
-    ret
 
 /**
  * Return 0 if two c strings (null terminated) are equal, 1 otherwise
@@ -109,6 +71,7 @@ c_str_eq:
  *
  * rdi = pointer to c string to print
  * rsi = file descriptor
+ * rax = return, write result
  */
 c_str_write:
     /*
@@ -143,6 +106,7 @@ c_str_write:
  * Print the contents of a c string (null terminated) to stdout
  *
  * rdi = pointer to c string to print
+ * rax = return, write result
  */
 c_str_print:
     movq $1, %rsi
@@ -153,65 +117,11 @@ c_str_print:
  * Print the contents of a c string (null terminated) to stderr
  *
  * rdi = pointer to c string to print
+ * rax = return, write result
  */
 c_str_eprint:
     movq $2, %rsi
     call c_str_write
-    ret
-
-/**
- * Return 1 if the given flag was passed as a CLI argument on the stack, 0 otherwise
- *
- * rdi = process stack pointer, %rsp
- * rsi = pointer to c string (null terminated) for flag to check
- * rax = return, 1 if the flag exists, 0 if it does not
- */
-cli_flag_exists:
-    /*
-     * r12 = argc
-     * r13 = stack pointer
-     * r14 = n (loop variable)
-     * r15 = pointer to flag string
-     */
-    push %r12
-    push %r13
-    push %r14
-    push %r15
-
-    movq (%rdi), %r12
-    movq %rdi, %r13
-    movq $1, %r14
-    movq %rsi, %r15
-
-    cmp $1, %r12
-    je .flag_not_found
-    jmp .check_each_arg
-
-.check_each_arg:
-    movq 8(%r13, %r14, 8), %rdi
-    movq %r15, %rsi
-    call c_str_eq
-    cmp $0, %rax
-    je .flag_found
-
-    inc %r14
-    cmp %r12, %r14
-    jl .check_each_arg
-    jmp .flag_not_found
-
-.flag_found:
-    movq $1, %rax
-    jmp .end_cli_flag_exists
-
-.flag_not_found:
-    movq $0, %rax
-    jmp .end_cli_flag_exists
-
-.end_cli_flag_exists:
-    pop %r15
-    pop %r14
-    pop %r13
-    pop %r12
     ret
 
 /**
@@ -245,29 +155,33 @@ c_str_len:
  * rax = return, the length of the c string copied not including the null byte
  */
 c_str_copy:
-    push %r12 /* source */
-    push %r13 /* dest */
-    push %r14 /* tmp */
-    push %r15 /* length */
+    /*
+     * r12 = source pointer
+     * r13 = destination pointer
+     * r14 = string length
+     * al = temporary byte
+     */
+    push %r12
+    push %r13
+    push %r14
 
     movq %rdi, %r12
     movq %rsi, %r13
-    movq $0, %r15
+    movq $0, %r14
 
 .copy_byte:
-    movb (%r12), %r14b
-    cmp $0, %r14b
+    movb (%r12), %al
+    cmp $0, %al
     je .end_copy_c_str
 
-    movb %r14b, (%r13)
+    movb %al, (%r13)
     inc %r12
     inc %r13
-    inc %r15
+    inc %r14
     jmp .copy_byte
 
 .end_copy_c_str:
-    movq %r15, %rax
-    pop %r15
+    movq %r14, %rax
     pop %r14
     pop %r13
     pop %r12
