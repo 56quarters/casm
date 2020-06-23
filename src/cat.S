@@ -120,17 +120,17 @@ _start:
 
 .show_help:
     lea help_msg, %rdi
-    call print_c_str
+    call c_str_print
     jmp .exit_success
 
 .error_bad_open:
     lea error_msg_bad_open, %rdi
-    call eprint_c_str
+    call c_str_eprint
     jmp .exit_error
 
 .error_write:
     lea error_msg_bad_write, %rdi
-    call eprint_c_str
+    call c_str_eprint
     jmp .exit_error
 
 .exit_success:

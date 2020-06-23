@@ -14,7 +14,8 @@
 
     .text
 
-    .global c_str_eq, cli_flag_exists, close_std_fds, eprint_c_str, exit_error, exit_success, print_c_str
+    .global c_str_copy, c_str_eprint, c_str_eq, c_str_len, c_str_print
+    .global cli_flag_exists, close_std_fds, exit_success, exit_error
 
 /**
  * Close stdin, stdout, and stderr
@@ -90,13 +91,13 @@ c_str_eq:
 
 .end_not_eq:
     movq $1, %rax
-    jmp .end
+    jmp .end_c_str_eq
 
 .end_eq:
     movq $0, %rax
-    jmp .end
+    jmp .end_c_str_eq
 
-.end:
+.end_c_str_eq:
     pop %r14
     pop %r13
     pop %r12
@@ -109,36 +110,31 @@ c_str_eq:
  * rdi = pointer to c string to print
  * rsi = file descriptor
  */
-write_c_str:
+c_str_write:
     /*
      * r12 = pointer to string to print
      * r13 = file descriptor
      */
     push %r12
     push %r13
+    push %r14
+
+    /* store the string + file descriptor for later */
     movq %rdi, %r12
     movq %rsi, %r13
 
-.find_null:
-    /* compare where r12 is pointing to null byte, end if equal */
-    cmpb $0, (%r12)
-    je .end_find_null
-    /* otherwise, advance the pointer and check the next byte */
-    inc %r12
-    jmp .find_null
+    /* get the length of the string to give to write() */
+    call c_str_len
+    movq %rax, %r14
 
-.end_find_null:
-    /* length is r12 - rdi, stored in r12 */
-    sub %rdi, %r12
-    /* write() syscall to print the string. note that these instructions don't
-    match the order of arguments to write() in order to avoid clobbering registers
-    that we're still using */
-    movq $1, %rax   /* syscall */
-    movq %rdi, %rsi /* buffer pointed to by rdi into rsi before we need to use rdi */
-    movq %r13, %rdi /* file descriptor into rdi */
-    movq %r12, %rdx /* computed string length into rdx */
+    /* write() the string to the given file descriptor */
+    movq $1, %rax
+    movq %r13, %rdi
+    movq %r12, %rsi
+    movq %r14, %rdx
     syscall
 
+    pop %r14
     pop %r13
     pop %r12
     ret
@@ -148,9 +144,9 @@ write_c_str:
  *
  * rdi = pointer to c string to print
  */
-print_c_str:
+c_str_print:
     movq $1, %rsi
-    call write_c_str
+    call c_str_write
     ret
 
 /**
@@ -158,9 +154,9 @@ print_c_str:
  *
  * rdi = pointer to c string to print
  */
-eprint_c_str:
+c_str_eprint:
     movq $2, %rsi
-    call write_c_str
+    call c_str_write
     ret
 
 /**
@@ -212,6 +208,65 @@ cli_flag_exists:
     jmp .end_cli_flag_exists
 
 .end_cli_flag_exists:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
+
+/**
+ * Return the number of bytes in a c string, not including the null byte
+ *
+ * rdi = pointer to a c string (null terminated)
+ * rax = return, number of bytes in the string
+ */
+c_str_len:
+    push %r12
+    movq %rdi, %r12
+
+.find_null:
+    cmpb $0, (%r12)
+    je .end_c_str_len
+    inc %r12
+    jmp .find_null
+
+.end_c_str_len:
+    /* length is r12 - rdi, stored in r12 */
+    sub %rdi, %r12
+    movq %r12, %rax
+    pop %r12
+    ret
+
+/**
+ * Copy the contents of a c string (null terminated) to a given buffer, omitting the null byte
+ *
+ * rdi = pointer to the c string to copy
+ * rsi = pointer to the buffer to copy into
+ * rax = return, the length of the c string copied not including the null byte
+ */
+c_str_copy:
+    push %r12 /* source */
+    push %r13 /* dest */
+    push %r14 /* tmp */
+    push %r15 /* length */
+
+    movq %rdi, %r12
+    movq %rsi, %r13
+    movq $0, %r15
+
+.copy_byte:
+    movb (%r12), %r14b
+    cmp $0, %r14b
+    je .end_copy_c_str
+
+    movb %r14b, (%r13)
+    inc %r12
+    inc %r13
+    inc %r15
+    jmp .copy_byte
+
+.end_copy_c_str:
+    movq %r15, %rax
     pop %r15
     pop %r14
     pop %r13

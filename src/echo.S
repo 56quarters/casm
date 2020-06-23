@@ -14,9 +14,9 @@
 
     .data
 
-/* 8K buffer for arguments */
+/* 4K buffer for arguments */
 buf:
-    .space 1024 * 8, 0x0
+    .space 1024 * 4, 0x0
     buf_len = . - buf
 
 help_msg:
@@ -76,14 +76,15 @@ _start:
     /* add a space to the buffer, only needed when n > 2 */
     lea space, %rdi
     movq %r14, %rsi
-    call copy_c_str
+    call c_str_copy
     add %rax, %r14
     /* fall through to print the next argument */
+
 .read_from_argv:
     /* copy argv[n] into our buffer then add a space or print it out */
     movq 8(%rsp, %r13, 8), %rdi
     movq %r14, %rsi
-    call copy_c_str
+    call c_str_copy
     add %rax, %r14
 
     inc %r13
@@ -95,7 +96,7 @@ _start:
     /* add a newline to the buffer before printing */
     lea newline, %rdi
     movq %r14, %rsi
-    call copy_c_str
+    call c_str_copy
     /* fall through to print the buffer */
 .print_buffer:
     /* Note that we haven't been copying the null bytes at the ends of strings
@@ -103,50 +104,14 @@ _start:
        works because we initialize the entire buffer with 0x0 (null byte) so
        as soon as we get to the end of bytes we've written, it's null */
     lea buf, %rdi
-    call print_c_str
+    call c_str_print
     jmp .exit_success
 
 .show_help:
     lea help_msg, %rdi
-    call eprint_c_str
+    call c_str_print
     jmp .exit_success
 
 .exit_success:
     call close_std_fds
     call exit_success
-
-/**
- * Copy the contents of a c string (null terminated) to a given buffer, omitting the null byte
- *
- * rdi = pointer to the c string to copy
- * rsi = pointer to the buffer to copy into
- * rax = return, the length of the c string copied not including the null byte
- */
-copy_c_str:
-    push %r12 /* source */
-    push %r13 /* dest */
-    push %r14 /* tmp */
-    push %r15 /* length */
-
-    movq %rdi, %r12
-    movq %rsi, %r13
-    movq $0, %r15
-
-.copy_byte:
-    movb (%r12), %r14b
-    cmp $0, %r14b
-    je .end_copy_c_str
-
-    movb %r14b, (%r13)
-    inc %r12
-    inc %r13
-    inc %r15
-    jmp .copy_byte
-
-.end_copy_c_str:
-    movq %r15, %rax
-    pop %r15
-    pop %r14
-    pop %r13
-    pop %r12
-    ret

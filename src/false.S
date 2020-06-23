@@ -55,7 +55,7 @@ _start:
 
 .show_help:
     lea help_msg, %rdi
-    call print_c_str
+    call c_str_print
     jmp .exit_error
 
 .exit_error:
