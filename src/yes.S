@@ -53,7 +53,7 @@ error_msg_bad_write:
     .global _start
 
 /**
- * Entry point -
+ * Entry point - repeatedly print 'y' or another string until killed.
  */
 _start:
     /*
