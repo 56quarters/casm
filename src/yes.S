@@ -36,14 +36,8 @@ help_msg:
 help_long:
     .asciz "--help"
 
-newline:
-    .asciz "\n"
-
 default_str:
     .asciz "y"
-
-space:
-    .asciz " "
 
 error_msg_bad_write:
     .asciz "yes: write error\n"
@@ -83,10 +77,8 @@ _start:
     jmp .use_argv_str
 
 .use_argv_str_space:
-    lea space, %rdi
-    movq %r14, %rsi
-    call c_str_copy
-    add %rax, %r14
+    movb $' ', (%r14)
+    inc %r14
     /* fall through to read the next argument */
 
 .use_argv_str:
@@ -109,10 +101,8 @@ _start:
     /* fall through to add a newline */
 
 .add_newline:
-    lea newline, %rdi
-    movq %r14, %rsi
-    call c_str_copy
-    add %rax, %r14
+    movb $'\n', (%r14)
+    inc %r14
     /* fall through to fill the output buffer */
 
 .fill_buffer:

@@ -29,6 +29,10 @@ $(out)/false: $(libs) $(src)/false.S
 	$(cc) -o $(out)/false.o -c $(src)/false.S
 	ld -o $(out)/false $(libs) $(out)/false.o
 
+$(out)/pwd: $(libs) $(src)/pwd.S
+	$(cc) -o $(out)/pwd.o -c $(src)/pwd.S
+	ld -o $(out)/pwd $(libs) $(out)/pwd.o
+
 $(out)/sleep: $(libs) $(src)/sleep.S
 	$(cc) -o $(out)/sleep.o -c $(src)/sleep.S
 	ld -o $(out)/sleep $(libs) $(out)/sleep.o
@@ -45,4 +49,4 @@ $(out)/yes: $(libs) $(src)/yes.S
 	$(cc) -o $(out)/yes.o -c $(src)/yes.S
 	ld -o $(out)/yes $(libs) $(out)/yes.o
 
-build: target $(out)/cat $(out)/echo $(out)/false $(out)/sleep $(out)/sync $(out)/true $(out)/yes
+build: target $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync $(out)/true $(out)/yes

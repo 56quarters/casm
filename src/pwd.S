@@ -10,19 +10,19 @@
  * except according to those terms.
  *******************************************************************/
 
-    /* echo implementation */
+    /* pwd implementation */
 
     .data
 
-/* 4K buffer for arguments */
+/* 4K buffer for our path */
 buf:
     .space 1024 * 4, 0x0
     buf_len = . - buf
 
 help_msg:
-    .ascii "Usage: echo [OPTION]... [STRING]...\n"
+    .ascii "Usage: pwd [OPTION]...\n"
     .ascii "\n"
-    .ascii "Echo STRING(s) to standard output.\n"
+    .ascii "Print the name of the current/working directory.\n"
     .ascii "\n"
     .ascii "Options:\n"
     .ascii "\t--help\tShow this help\n"
@@ -32,14 +32,17 @@ help_long:
     .asciz "--help"
 
 error_msg_bad_write:
-    .asciz "echo: write error\n"
+    .asciz "pwd: write error\n"
+
+error_msg_bad_call:
+    .asciz "pwd: could not determine working directory\n"
 
     .text
 
     .global _start
 
 /**
- * Entry point - print any arguments provided to stdout.
+ * Entry point - print the current working directory and exit
  */
 _start:
     /*
@@ -55,8 +58,7 @@ _start:
     lea buf, %r14
 
     cmp $1, %r12
-     /* if there are no args, jump to the end which just prints a newline */
-    je .print_buffer
+    je .print_directory
 
 .parse_cli_flags:
     /* check for a "--help" flag */
@@ -66,37 +68,29 @@ _start:
 
     cmp $1, %rax
     je .show_help
-    jmp .read_from_argv
 
-.read_from_argv_space:
-    /* add a space to the buffer, only needed when n > 2 */
-    movb $' ', (%r14)
-    inc %r14
+.print_directory:
+    movq $79, %rax
+    lea buf, %rdi
+    movq $buf_len, %rsi
+    syscall
 
-.read_from_argv:
-    /* copy argv[n] into our buffer then add a space or print it out */
-    movq 8(%rsp, %r13, 8), %rdi
-    movq %r14, %rsi
-    call c_str_copy
+    /* if the syscall fails for some reason */
+    cmp $0, %rax
+    jl .error_bad_call
+
+    /* add the length of the string copied */
     add %rax, %r14
-
-    inc %r13
-    cmp %r12, %r13
-    jl .read_from_argv_space
-
-.print_buffer:
-    /* add a newline to the buffer before printing */
+    /* add a newline as the last, byte replacing the final null
+    byte the getcwd() added for some reason (by including it in
+    the length returned) */
+    dec %r14
     movb $'\n', (%r14)
-    inc %r14
 
-    /* Note that we haven't been copying the null bytes at the ends of strings
-       into the buffer and we don't add one here before trying to print. This
-       works because we initialize the entire buffer with 0x0 (null byte) so
-       as soon as we get to the end of bytes we've written, it's null */
     lea buf, %rdi
     call c_str_print
 
-    /* if we coudln't print to stdout, print to stderr and exit */
+    /* if we couldn't print to stdout, print to stderr and exit */
     cmp $0, %rax
     jl .error_write
     jmp .exit_success
@@ -105,6 +99,11 @@ _start:
     lea help_msg, %rdi
     call c_str_print
     jmp .exit_success
+
+.error_bad_call:
+    lea error_msg_bad_call, %rdi
+    call c_str_eprint
+    jmp .exit_error
 
 .error_write:
     lea error_msg_bad_write, %rdi
