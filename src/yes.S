@@ -71,7 +71,6 @@ _start:
     cmp $1, %r12
      /* if there are no args, use the default string */
     je .use_default_str
-    jmp .parse_cli_flags
 
 .parse_cli_flags:
     /* check for a "--help" flag */

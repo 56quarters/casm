@@ -41,7 +41,6 @@ _start:
 
     cmp $1, %r12
     je .sync_writes  /* if there's only one argv value, sync */
-    jmp .parse_cli_flags /* otherwise, parse CLI flags */
 
 .parse_cli_flags:
     /* check for a "--help" flag or just sync */
@@ -51,7 +50,6 @@ _start:
 
     cmp $1, %rax
     je .show_help
-    jmp .sync_writes
 
 .sync_writes:
     movq $162, %rax

@@ -62,8 +62,7 @@ _start:
 
     cmp $1, %r12
      /* if there are no args, jump to the end which just prints a newline */
-    je .print_buffer_newline
-    jmp .parse_cli_flags
+    je .print_buffer
 
 .parse_cli_flags:
     /* check for a "--help" flag */
@@ -81,7 +80,6 @@ _start:
     movq %r14, %rsi
     call c_str_copy
     add %rax, %r14
-    /* fall through to print the next argument */
 
 .read_from_argv:
     /* copy argv[n] into our buffer then add a space or print it out */
@@ -93,15 +91,14 @@ _start:
     inc %r13
     cmp %r12, %r13
     jl .read_from_argv_space
-    jmp .print_buffer_newline
 
-.print_buffer_newline:
+.print_buffer:
     /* add a newline to the buffer before printing */
     lea newline, %rdi
     movq %r14, %rsi
     call c_str_copy
-    /* fall through to print the buffer */
-.print_buffer:
+    add %rax, %r14
+
     /* Note that we haven't been copying the null bytes at the ends of strings
        into the buffer and we don't add one here before trying to print. This
        works because we initialize the entire buffer with 0x0 (null byte) so

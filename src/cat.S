@@ -66,8 +66,7 @@ _start:
     movq $1, %r13 /* start at 1, skip argv[0] */
 
     cmp $1, %r12
-    je .read_from_stdin  /* if there's only one argv value, read from stdin */
-    jmp .parse_cli_flags /* otherwise, parse CLI flags and read files */
+    jg .parse_cli_flags /* more than one arg, parse CLI flags and read files */
 
 .read_from_stdin:
     /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
@@ -86,7 +85,6 @@ _start:
 
     cmp $1, %rax
     je .show_help
-    jmp .read_from_argv
 
 .read_from_argv:
     /* try to open() argv[n] as a file or stdin for the name "-" */

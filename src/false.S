@@ -38,10 +38,8 @@ _start:
      * r12 = argc
      */
     movq (%rsp), %r12
-
     cmp $1, %r12
     je .exit_error  /* if there's only one argv value, exit */
-    jmp .parse_cli_flags /* otherwise, parse CLI flags */
 
 .parse_cli_flags:
     /* check for a "--help" flag or just exit */

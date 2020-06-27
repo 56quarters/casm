@@ -70,7 +70,6 @@ _start:
     cmp $1, %r12
      /* if there are no args, error */
     je .error_no_arguments
-    jmp .parse_cli_flags
 
 .parse_cli_flags:
     /* check for a "--help" flag */
@@ -80,7 +79,6 @@ _start:
 
     cmp $1, %rax
     je .show_help
-    jmp .read_from_argv
 
 .read_from_argv:
     /* parse each argv[n] into some number of seconds to sleep */
@@ -104,7 +102,6 @@ _start:
     inc %r13
     cmp %r12, %r13
     jl .read_from_argv
-    jmp .sleep_for_time
 
 .sleep_for_time:
     /* sleep the total amount from all arguments (stored in r15) */
@@ -152,9 +149,8 @@ parse_unit:
 .examine_byte:
     movb (%r12), %dil
     call is_digit
-    cmp $1, %rax
-    je .skip_byte
-    jmp .parse_str
+    cmp $0, %rax
+    je .parse_str
 
 .skip_byte:
     inc %r12
@@ -163,7 +159,7 @@ parse_unit:
 .parse_str:
     movq %r12, %rdi
     call c_str_to_unit
-    /* fall through to return */
+
 .end_parse_unit:
     pop %r12
     ret
@@ -199,25 +195,18 @@ c_str_to_unit:
     /* fall through for invalid units */
 .unit_invalid:
     movq $0, %rax
-    jmp .end_c_str_to_unit
-
+    ret
 .unit_second:
     movq $1, %rax
-    jmp .end_c_str_to_unit
-
+    ret
 .unit_minute:
     movq $60, %rax
-    jmp .end_c_str_to_unit
-
+    ret
 .unit_hour:
     movq $3600, %rax
-    jmp .end_c_str_to_unit
-
+    ret
 .unit_day:
     movq $86400, %rax
-    jmp .end_c_str_to_unit
-
-.end_c_str_to_unit:
     ret
 
 /**

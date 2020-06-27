@@ -41,7 +41,6 @@ _start:
 
     cmp $1, %r12
     je .exit_success  /* if there's only one argv value, exit */
-    jmp .parse_cli_flags /* otherwise, parse CLI flags */
 
 .parse_cli_flags:
     /* check for a "--help" flag or just exit */

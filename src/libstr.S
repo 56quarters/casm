@@ -251,12 +251,10 @@ is_digit:
     jl .set_false
     cmpb $57, %dil /* ascii 9 */
     jg .set_false
-    jmp .set_true
+
+    movq $1, %rax
+    ret
 
 .set_false:
     movq $0, %rax
-    ret
-
-.set_true:
-    movq $1, %rax
     ret

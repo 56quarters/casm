@@ -79,7 +79,6 @@ cli_flag_exists:
 
     cmp $1, %r12
     je .flag_not_found
-    jmp .check_each_arg
 
 .check_each_arg:
     movq 8(%r13, %r14, 8), %rdi
@@ -91,14 +90,13 @@ cli_flag_exists:
     inc %r14
     cmp %r12, %r14
     jl .check_each_arg
-    jmp .flag_not_found
-
-.flag_found:
-    movq $1, %rax
-    jmp .end_cli_flag_exists
 
 .flag_not_found:
     movq $0, %rax
+    jmp .end_cli_flag_exists
+
+.flag_found:
+    movq $1, %rax
     jmp .end_cli_flag_exists
 
 .end_cli_flag_exists:
