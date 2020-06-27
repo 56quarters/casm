@@ -35,9 +35,6 @@ help_msg:
     .ascii "\t--help\tShow this help\n"
     .byte  0
 
-time_valid:
-    .asciz "2"
-
 help_long:
     .asciz "--help"
 
@@ -49,9 +46,6 @@ error_msg_bad_time:
 
 error_msg_bad_unit:
     .asciz "sleep: invalid time unit supplied\n"
-
-hello:
-    .asciz "WHAT\n"
 
     .text
 
