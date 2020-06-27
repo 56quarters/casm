@@ -154,9 +154,7 @@ open_file:
     call c_str_eq
     cmp $0, %rax
     je .open_stdin
-
     /* otherwise try to open it as a normal file name */
-    jmp .open_name
 
 .open_name:
     movq $2, %rax
