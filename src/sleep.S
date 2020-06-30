@@ -138,9 +138,10 @@ _start:
     call exit_success
 
 /**
+ * Determine the scaling factor of a time unit based on user input (c string)
  *
- *
- *
+ * rdi = c string (null terminated) user input, probably something like '30s'
+ * rax = return, scaling factor or 0 on error
  */
 parse_unit:
     push %r12
@@ -157,39 +158,45 @@ parse_unit:
     jmp .examine_byte
 
 .parse_str:
-    movq %r12, %rdi
-    call c_str_to_unit
+    movb (%r12), %dil
+    call byte_to_unit
 
 .end_parse_unit:
     pop %r12
     ret
 
 /**
+ * Determine the scale for a time unit based on an ascii byte, relative to seconds
  *
+ * s -> seconds, 1
+ * m -> minutes, 60
+ * h -> hours, 3600
+ * d -> days, 86400
+ * [missing] -> seconds, 1
+ * [invalid] -> error, 0
  *
+ * dil = byte to convert to a scale
+ * rax = return, scaling factor or 0 on error
  */
-c_str_to_unit:
-    /* copy first byte of the string */
-    movb (%rdi), %r10b
-
+byte_to_unit:
     /* null byte? default to seconds */
-    cmpb $0, %r10b
+    cmpb $0, %dil
     je .unit_second
 
     /* seconds? */
-    cmpb $'s', %r10b
+    cmpb $'s', %dil
     je .unit_second
 
     /* minutes? */
-    cmpb $'m', %r10b
+    cmpb $'m', %dil
     je .unit_minute
 
     /* hours? */
-    cmpb $'h', %r10b
+    cmpb $'h', %dil
     je .unit_hour
 
     /* days? */
-    cmpb $'d', %r10b
+    cmpb $'d', %dil
     je .unit_day
 
     /* fall through for invalid units */
