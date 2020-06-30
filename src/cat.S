@@ -33,9 +33,6 @@ help_msg:
 help_long:
     .asciz "--help"
 
-stdin_file:
-    .asciz "-"
-
 error_msg_bad_open:
     .asciz "cat: could not open file\n"
 
@@ -150,9 +147,7 @@ open_file:
     movq %rdi, %r12
 
     /* compare the given file name to "-" to see if we should read from stdin */
-    lea stdin_file, %rsi
-    call c_str_eq
-    cmp $0, %rax
+    cmpb $'-', (%rsi)
     je .open_stdin
     /* otherwise try to open it as a normal file name */
 
