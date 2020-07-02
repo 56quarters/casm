@@ -16,8 +16,8 @@
 
 /* struct timespec to pass to nanosleep() as requested or remaining time */
 timespec:
-    .space 8, 0x0 /* 8 bytes for "tv_sec" */
-    .space 8, 0x0 /* 8 bytes for "tv_nsec" */
+    .space 8, 0x0 /* 8 bytes for time_t "tv_sec" */
+    .space 8, 0x0 /* 8 bytes for long "tv_nsec" */
 
 /* 4K buffer for arguments */
 buf:
