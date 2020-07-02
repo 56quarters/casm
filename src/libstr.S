@@ -14,7 +14,8 @@
 
     .text
 
-    .global c_str_copy, c_str_eprint, c_str_eq, c_str_len, c_str_print, c_str_to_number, c_str_write, is_digit
+    .global c_str_copy, c_str_eprint, c_str_eq, c_str_len, c_str_print
+    .global c_str_to_number, c_str_write, c_str_write_len, is_digit
 
 /**
  * Return 0 if two c strings (null terminated) are equal, 1 otherwise
@@ -65,30 +66,31 @@ c_str_eq:
     pop %r12
     ret
 
-
 /**
- * Write the contents of a c string (null terminated) to the given file descriptor
+ * Write N bytes of the contents of a c string (null terminated) to the given file descriptor
+ *
+ * This method should be used when the length of the string is known ahead of time or when it
+ * can be computed once to be used in multiple calls to print the same string.
  *
  * rdi = pointer to c string to print
  * rsi = file descriptor
+ * rdx = string length
  * rax = return, write result
  */
-c_str_write:
+c_str_write_len:
     /*
      * r12 = pointer to string to print
      * r13 = file descriptor
+     * r14 = string length
      */
     push %r12
     push %r13
     push %r14
 
-    /* store the string + file descriptor for later */
+    /* store the string, file descriptor, string length */
     movq %rdi, %r12
     movq %rsi, %r13
-
-    /* get the length of the string to give to write() */
-    call c_str_len
-    movq %rax, %r14
+    movq %rdx, %r14
 
     /* write() the string to the given file descriptor */
     movq $1, %rax
@@ -98,6 +100,38 @@ c_str_write:
     syscall
 
     pop %r14
+    pop %r13
+    pop %r12
+    ret
+
+/**
+ * Write a c string (null terminated) to the given file descriptor.
+ *
+ * The length of the string is computed before being written.
+ *
+ * rdi = pointer to c string to print
+ * rsi = file descriptor
+ * rax = return, write result
+ */
+c_str_write:
+    /*
+     * r12 = pointer to the string to print
+     * r13 = file descriptor
+     */
+    push %r12
+    push %r13
+
+    movq %rdi, %r12
+    movq %rsi, %r13
+
+    /* rdi is already a pointer to the string */
+    call c_str_len
+
+    movq %r12, %rdi
+    movq %r13, %rsi
+    movq %rax, %rdx
+    call c_str_write_len
+
     pop %r13
     pop %r12
     ret

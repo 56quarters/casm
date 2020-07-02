@@ -57,6 +57,7 @@ _start:
      * r12 = argc
      * r13 = n loop variable
      * r14 = input buffer address + offset
+     * r15 = buffered string length
      */
     movq (%rsp), %r12
     movq $1, %r13 /* start at 1, skip argv[0] */
@@ -110,11 +111,18 @@ _start:
     lea output_buf, %rsi
     movq $output_buf_len, %rdx
     call fill_buffer
+
+    lea output_buf, %rdi
+    call c_str_len
+    movq %rax, %r15
+
     /* fall through to print the output buffer */
 
 .print_buffer:
     lea output_buf, %rdi
-    call c_str_print
+    movq $1, %rsi
+    movq %r15, %rdx
+    call c_str_write_len
 
     /* if we couldn't print to stdout, print to stderr and exit */
     cmp $0, %rax
