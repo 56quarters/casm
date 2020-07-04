@@ -28,8 +28,8 @@ help_msg:
     .ascii "Usage: sleep [OPTION]... [NUMBER][SUFFIX]...\n"
     .ascii "\n"
     .ascii "Sleep for NUMBER seconds (by default). SUFFIX can be s for seconds,\n"
-    .ascii "m for minutes, h for hours, or d for days. If more than a single\n"
-    .ascii "argument is given, sleep for the sum of their values.\n"
+    .ascii "m for minutes, h for hours, d for days, or omitted for seconds. If more\n"
+    .ascii "than a single argument is given, sleep for the sum of their values.\n"
     .ascii "\n"
     .ascii "Options:\n"
     .ascii "\t--help\tShow this help\n"
@@ -78,7 +78,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
 
 .read_from_argv:
     /* parse each argv[n] into some number of seconds to sleep */

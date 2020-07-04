@@ -65,7 +65,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
     jmp .read_from_argv
 
 .read_from_argv_space:

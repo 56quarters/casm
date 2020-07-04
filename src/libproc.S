@@ -54,15 +54,15 @@ exit_error:
     ret
 
 /**
- * Return 1 if the given flag was passed as a CLI argument on the stack, 0 otherwise
+ * Return the number of times the CLI flag was passed as an on the stack
  *
  * rdi = process stack pointer, %rsp
  * rsi = pointer to c string (null terminated) for flag to check
- * rax = return, 1 if the flag exists, 0 if it does not
+ * rax = return, number of times the given flag appears in argv
  */
 cli_flag_exists:
     /*
-     * r12 = argc
+     * r12 = number of occurences
      * r13 = stack pointer
      * r14 = n (loop variable)
      * r15 = pointer to flag string
@@ -72,34 +72,35 @@ cli_flag_exists:
     push %r14
     push %r15
 
-    movq (%rdi), %r12
+    movq $0, %r12
     movq %rdi, %r13
     movq $1, %r14
     movq %rsi, %r15
 
-    cmp $1, %r12
-    je .flag_not_found
+    /* NOTE: we just deref the stack when we need to check argc */
+    cmp $1, (%r13)
+    je .end_cli_flag_exists
 
 .check_each_arg:
     movq 8(%r13, %r14, 8), %rdi
     movq %r15, %rsi
     call c_str_eq
     cmp $0, %rax
-    je .flag_found
+    je .incr_found_count
 
+.resume_check_each_arg:
     inc %r14
-    cmp %r12, %r14
+    cmp (%r13), %r14
     jl .check_each_arg
-
-.flag_not_found:
-    movq $0, %rax
     jmp .end_cli_flag_exists
 
-.flag_found:
-    movq $1, %rax
-    jmp .end_cli_flag_exists
+.incr_found_count:
+    inc %r12
+    jmp .resume_check_each_arg
 
 .end_cli_flag_exists:
+    movq %r12, %rax
+
     pop %r15
     pop %r14
     pop %r13

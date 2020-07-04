@@ -48,7 +48,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
     jmp .exit_error
 
 .show_help:

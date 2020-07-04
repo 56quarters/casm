@@ -33,6 +33,9 @@ help_msg:
 help_long:
     .asciz "--help"
 
+stdin_file:
+    .asciz "-"
+
 error_msg_bad_open:
     .asciz "cat: could not open file\n"
 
@@ -81,7 +84,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
 
 .read_from_argv:
     /* try to open() argv[n] as a file or stdin for the name "-" */
@@ -140,27 +143,30 @@ _start:
  * Open a file of the given name or stdin if the file is "-"
  *
  * rdi = pointer to file name
- * rax = file descriptor
+ * rax = return, file descriptor
  */
 open_file:
+    /*
+     * r12 = pointer to file name
+     */
     push %r12
     movq %rdi, %r12
 
     /* compare the given file name to "-" to see if we should read from stdin */
-    cmpb $'-', (%rsi)
-    je .open_stdin
-    /* otherwise try to open it as a normal file name */
+    lea stdin_file, %rsi
+    call c_str_eq
+    cmp $0, %rax
+    jne .open_name
+
+.open_stdin:
+    movq $0, %rax
+    jmp .end_open_file
 
 .open_name:
     movq $2, %rax
     movq %r12, %rdi
     movq $0, %rsi
-    syscall /* let the return here (rax) persist until we return */
-    jmp .end_open_file
-
-.open_stdin:
-    movq $0, %rax
-    jmp .end_open_file
+    syscall
 
 .end_open_file:
     pop %r12

@@ -10,7 +10,7 @@ I suddenly found myself with a lot of free time and I wanted to learn assembly.
 
 ## Are they at least really fast?
 
-No. They're generally on par with existing implementations except with more
+Nope. They're generally on par with existing implementations except with more
 bugs, far fewer features, and far less portable. But with the power of your
 imagination, maybe they'll *feel* faster.
 
@@ -30,3 +30,9 @@ make build
 
 The binaries will be in the `target` directory. They'll run on x86-64 GNU/Linux
 and require no libraries, not even libc.
+
+## Compatibility
+
+Casm implementations of core utilities will generally not support all the options
+or features of their GNU counterparts. They'll usually be similar in spirit, but
+not drop-in replacements.

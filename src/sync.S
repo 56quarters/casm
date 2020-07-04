@@ -49,7 +49,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
 
 .sync_writes:
     movq $162, %rax

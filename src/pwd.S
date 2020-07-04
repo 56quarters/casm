@@ -67,7 +67,7 @@ _start:
     call cli_flag_exists
 
     cmp $1, %rax
-    je .show_help
+    jge .show_help
 
 .print_directory:
     movq $79, %rax

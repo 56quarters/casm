@@ -41,6 +41,10 @@ $(out)/sync: $(libs) $(src)/sync.S
 	$(cc) -o $(out)/sync.o -c $(src)/sync.S
 	ld -o $(out)/sync $(libs) $(out)/sync.o
 
+$(out)/touch: $(libs) $(src)/touch.S
+	$(cc) -o $(out)/touch.o -c $(src)/touch.S
+	ld -o $(out)/touch $(libs) $(out)/touch.o
+
 $(out)/true: $(libs) $(src)/true.S
 	$(cc) -o $(out)/true.o -c $(src)/true.S
 	ld -o $(out)/true $(libs) $(out)/true.o
@@ -49,4 +53,5 @@ $(out)/yes: $(libs) $(src)/yes.S
 	$(cc) -o $(out)/yes.o -c $(src)/yes.S
 	ld -o $(out)/yes $(libs) $(out)/yes.o
 
-build: target $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync $(out)/true $(out)/yes
+build: target $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync \
+	$(out)/touch $(out)/true $(out)/yes
