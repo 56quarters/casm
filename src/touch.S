@@ -68,7 +68,7 @@ _start:
 .parse_cli_flags:
     /* check for a "--help" flag */
     movq %rsp, %rdi
-    lea help_long, %rsi
+    movq $help_long, %rsi
     call cli_flag_exists
     cmp $1, %rax
     jge .show_help
@@ -86,17 +86,17 @@ _start:
     jmp .exit_success
 
 .show_help:
-    lea help_msg, %rdi
+    movq $help_msg, %rdi
     call c_str_print
     jmp .exit_success
 
 .error_no_arguments:
-    lea error_msg_no_arguments, %rdi
+    movq $error_msg_no_arguments, %rdi
     call c_str_eprint
     jmp .exit_error
 
 .error_bad_open:
-    lea error_msg_bad_open, %rdi
+    movq $error_msg_bad_open, %rdi
     call c_str_eprint
     jmp .exit_error
 
@@ -122,7 +122,7 @@ open_file:
     movq %rdi, %r12
 
     /* check if the file name is just "-" for stdout */
-    lea stdout_file, %rsi
+    movq $stdout_file, %rsi
     call c_str_eq
     cmp $0, %rax
     jne .open_name

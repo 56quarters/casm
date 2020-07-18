@@ -74,7 +74,7 @@ _start:
 .parse_cli_flags:
     /* check for a "--help" flag */
     movq %rsp, %rdi
-    lea help_long, %rsi
+    movq $help_long, %rsi
     call cli_flag_exists
 
     cmp $1, %rax
@@ -110,22 +110,22 @@ _start:
     jmp .exit_success
 
 .show_help:
-    lea help_msg, %rdi
+    movq $help_msg, %rdi
     call c_str_print
     jmp .exit_success
 
 .error_no_arguments:
-    lea error_msg_no_arguments, %rdi
+    movq $error_msg_no_arguments, %rdi
     call c_str_eprint
     jmp .exit_error
 
 .error_invalid_time:
-    lea error_msg_bad_time, %rdi
+    movq $error_msg_bad_time, %rdi
     call c_str_eprint
     jmp .exit_error
 
 .error_invalid_unit:
-    lea error_msg_bad_unit, %rdi
+    movq $error_msg_bad_unit, %rdi
     call c_str_eprint
     jmp .exit_error
 
@@ -230,7 +230,7 @@ sleep_time:
      *
      * See https://lwn.net/Articles/17744/
      */
-    lea timespec, %rdi
+    movq $timespec, %rdi
     movq $0, %rsi
 
     /* set the number of seconds to sleep and 0 nano seconds */

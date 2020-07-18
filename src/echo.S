@@ -52,7 +52,7 @@ _start:
      */
     movq (%rsp), %r12
     movq $1, %r13 /* start at 1, skip argv[0] */
-    lea buf, %r14
+    movq $buf, %r14
 
     cmp $1, %r12
      /* if there are no args, jump to the end which just prints a newline */
@@ -61,7 +61,7 @@ _start:
 .parse_cli_flags:
     /* check for a "--help" flag */
     movq %rsp, %rdi
-    lea help_long, %rsi
+    movq $help_long, %rsi
     call cli_flag_exists
 
     cmp $1, %rax
@@ -93,7 +93,7 @@ _start:
        into the buffer and we don't add one here before trying to print. This
        works because we initialize the entire buffer with 0x0 (null byte) so
        as soon as we get to the end of bytes we've written, it's null */
-    lea buf, %rdi
+    movq $buf, %rdi
     call c_str_print
 
     /* if we coudln't print to stdout, print to stderr and exit */
@@ -102,12 +102,12 @@ _start:
     jmp .exit_success
 
 .show_help:
-    lea help_msg, %rdi
+    movq $help_msg, %rdi
     call c_str_print
     jmp .exit_success
 
 .error_write:
-    lea error_msg_bad_write, %rdi
+    movq $error_msg_bad_write, %rdi
     call c_str_eprint
     jmp .exit_error
 

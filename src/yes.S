@@ -61,7 +61,7 @@ _start:
      */
     movq (%rsp), %r12
     movq $1, %r13 /* start at 1, skip argv[0] */
-    lea input_buf, %r14
+    movq $input_buf, %r14
 
     cmp $1, %r12
      /* if there are no args, use the default string */
@@ -70,7 +70,7 @@ _start:
 .parse_cli_flags:
     /* check for a "--help" flag */
     movq %rsp, %rdi
-    lea help_long, %rsi
+    movq $help_long, %rsi
     call cli_flag_exists
 
     cmp $1, %rax
@@ -95,7 +95,7 @@ _start:
     jmp .add_newline
 
 .use_default_str:
-    lea default_str, %rdi
+    movq $default_str, %rdi
     movq %r14, %rsi
     call c_str_copy
     add %rax, %r14
@@ -107,19 +107,19 @@ _start:
     /* fall through to fill the output buffer */
 
 .fill_buffer:
-    lea input_buf, %rdi
-    lea output_buf, %rsi
+    movq $input_buf, %rdi
+    movq $output_buf, %rsi
     movq $output_buf_len, %rdx
     call fill_buffer
 
-    lea output_buf, %rdi
+    movq $output_buf, %rdi
     call c_str_len
     movq %rax, %r15
 
     /* fall through to print the output buffer */
 
 .print_buffer:
-    lea output_buf, %rdi
+    movq $output_buf, %rdi
     movq $1, %rsi
     movq %r15, %rdx
     call c_str_write_len
@@ -130,12 +130,12 @@ _start:
     jmp .print_buffer
 
 .show_help:
-    lea help_msg, %rdi
+    movq $help_msg, %rdi
     call c_str_print
     jmp .exit_success
 
 .error_write:
-    lea error_msg_bad_write, %rdi
+    movq $error_msg_bad_write, %rdi
     call c_str_eprint
     jmp .exit_error
 

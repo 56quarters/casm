@@ -80,7 +80,7 @@ _start:
 .parse_cli_flags:
     /* check for a "--help" flag */
     movq %rsp, %rdi
-    lea help_long, %rsi
+    movq $help_long, %rsi
     call cli_flag_exists
 
     cmp $1, %rax
@@ -117,17 +117,17 @@ _start:
     jmp .exit_success
 
 .show_help:
-    lea help_msg, %rdi
+    movq $help_msg, %rdi
     call c_str_print
     jmp .exit_success
 
 .error_bad_open:
-    lea error_msg_bad_open, %rdi
+    movq $error_msg_bad_open, %rdi
     call c_str_eprint
     jmp .exit_error
 
 .error_write:
-    lea error_msg_bad_write, %rdi
+    movq $error_msg_bad_write, %rdi
     call c_str_eprint
     jmp .exit_error
 
@@ -153,7 +153,7 @@ open_file:
     movq %rdi, %r12
 
     /* compare the given file name to "-" to see if we should read from stdin */
-    lea stdin_file, %rsi
+    movq $stdin_file, %rsi
     call c_str_eq
     cmp $0, %rax
     jne .open_name
