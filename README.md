@@ -7,6 +7,9 @@ Only supports x86-64 on GNU/Linux.
 ## Why did you do this?
 
 I suddenly found myself with a lot of free time and I wanted to learn assembly.
+Lots of people create implementations of core utilities in "high level", "modern",
+and "not a tedious nightmare from which I can't wake up" languages like Rust, Go,
+or Haskell. There aren't many assembly implementations out there.
 
 ## Are they at least really fast?
 
@@ -20,7 +23,7 @@ Absolutely not.
 
 ## How do I build this nonsense?
 
-Building requires GCC, a linker, and Make.
+Building requires the GNU toolchain: `gcc`, `ld`, and `make`.
 
 In the project root:
 
@@ -34,5 +37,5 @@ and require no libraries, not even libc.
 ## Compatibility
 
 These implementations of core utilities don't support all the options or features
-of their GNU counterparts. They're similar in spirit, but defnitely not drop-in
-replacements.
+of their BSD or GNU counterparts. They're similar in spirit, but definitely not drop-in
+replacements or even remotely POSIX compatible.
