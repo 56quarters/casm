@@ -14,7 +14,7 @@
 
     .text
 
-    .global cli_flag_exists, close_std_fds, exit_success, exit_error
+    .global cli_flag_exists, close_std_fds, exit_success, exit_error, open_file, close_file
 
 /**
  * Close stdin, stdout, and stderr
@@ -105,4 +105,45 @@ cli_flag_exists:
     pop %r14
     pop %r13
     pop %r12
+    ret
+
+/**
+ * Open a file of the given name or stdin if the file is "-"
+ *
+ * rdi = pointer to file name
+ * rax = return, file descriptor
+ */
+open_file:
+    /* compare the given file name to "-" to see if we should read from stdin */
+    cmpb $'-', (%rdi)
+    jne .open_name
+
+.open_stdin:
+    mov $0, %rax
+    jmp .end_open_file
+
+.open_name:
+    mov $2, %rax
+    /* rdi already set */
+    mov $0, %rsi
+    syscall
+
+.end_open_file:
+    ret
+
+/**
+ * Close the given file descriptor if it isn't stdin (fd 0)
+ *
+ * rdi = file descriptor
+ */
+close_file:
+    /* if the fd is stdin, don't close it */
+    cmp $0, %rdi
+    je .end_close_file
+
+    /* otherwise, try to close it */
+    mov $3, %rax
+    syscall
+
+.end_close_file:
     ret
