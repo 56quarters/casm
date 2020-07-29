@@ -1,0 +1,471 @@
+/********************************************************************
+ * Casm - some core utilities implemented in GNU assembly.
+ *
+ * Copyright 2020 Nick Pillitteri
+ *
+ * Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+ * http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+ * <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+ * option. This file may not be copied, modified, or distributed
+ * except according to those terms.
+ *******************************************************************/
+
+    /* base64 implementation */
+
+    .data
+
+/* 60K buffer for raw data. Note that this is evenly divisible by 3 (3:4 raw:encoded) */
+buf:
+    .space 1024 * 60, 0x0
+    buf_len = . - buf
+
+/* 80k buffer for encoded data. Note that this is evenly divisible by 4 (3:4 raw:encoded) */
+encoded:
+    .space 1024 * 80, 0x0
+    encoded_len = . - encoded
+
+/* array of base64 characters, indexed on the decimal value (0-63), mapped to their ascii character */
+lookup:
+    .byte \
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', \
+      'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', \
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
+
+help_msg:
+    .ascii "Usage: base64 [OPTION]... [FILE]...\n"
+    .ascii "\n"
+    .ascii "Base64 encode or decode FILE(s) or standard input to standard output.\n"
+    .ascii "\n"
+    .ascii "When no FILE is provided or when FILE is -, read from standard input.\n"
+    .ascii "\n"
+    .ascii "Options:\n"
+    .ascii "\t--help\t\tShow this help\n"
+    .ascii "\t-d, --decode\tDecode data\n"
+    .byte  0
+
+help_long:
+    .asciz "--help"
+
+decode_long:
+    .asciz "--decode"
+
+decode_short:
+    .asciz "-d"
+
+stdin_file:
+    .asciz "-"
+
+error_msg_bad_open:
+    .asciz "base64: could not open file\n"
+
+error_msg_bad_write:
+    .asciz "base64: read/write error\n"
+
+    .text
+
+    .global _start
+
+/**
+ *
+ */
+_start:
+    /*
+     * (rsp) = argc
+     * (rsp + 8 + 8 * n ) = argv[n]
+     *
+     * r12 = argc
+     * r13 = n loop variable
+     * r14 = current file descriptor
+     */
+    mov (%rsp), %r12
+    mov $1, %r13 /* start at 1, skip argv[0] */
+
+    cmp $1, %r12
+    jg .parse_cli_flags /* more than one arg, parse CLI flags and read files */
+
+.read_from_stdin:
+    /* default to using fd 0 (stdin) for reads, fd 1 (stdout) for writes */
+    mov $0, %rdi
+    mov $1, %rsi
+    call read_write_buf
+    cmp $0, %rax
+    jne .error_write
+    jmp .exit_success
+
+.parse_cli_flags:
+    /* check for a "--help" flag */
+    mov %rsp, %rdi
+    mov $help_long, %rsi
+    call cli_flag_exists
+
+    cmp $1, %rax
+    jge .show_help
+
+.read_from_argv:
+    /* try to open() argv[n] as a file or stdin for the name "-" */
+    mov 8(%rsp, %r13, 8), %rdi
+    call open_file
+
+    /* save opened file descriptor */
+    mov %rax, %r14
+    cmp $0, %r14
+    /* exit with an error if the fd is < 0 */
+    jl .error_bad_open
+
+    /* read just opened file descriptor, write to stdout */
+    mov %r14, %rdi
+    mov $1, %rsi
+    call read_write_buf
+    cmp $0, %rax
+    jne .error_write
+
+    /* close file descriptor */
+    mov %r14, %rdi
+    call close_file
+
+    /* if n is less than argc, open the next file */
+    inc %r13
+    cmp %r12, %r13
+    jl .read_from_argv
+
+    /* otherwise, exit successfully since we've read all files */
+    jmp .exit_success
+
+.show_help:
+    mov $help_msg, %rdi
+    call c_str_print
+    jmp .exit_success
+
+.error_bad_open:
+    mov $error_msg_bad_open, %rdi
+    call c_str_eprint
+    jmp .exit_error
+
+.error_write:
+    mov $error_msg_bad_write, %rdi
+    call c_str_eprint
+    jmp .exit_error
+
+.exit_success:
+    call close_std_fds
+    call exit_success
+
+.exit_error:
+    call close_std_fds
+    call exit_error
+
+/**
+ * Open a file of the given name or stdin if the file is "-"
+ *
+ * rdi = pointer to file name
+ * rax = return, file descriptor
+ */
+open_file:
+    /*
+     * r12 = pointer to file name
+     */
+    push %r12
+    mov %rdi, %r12
+
+    /* compare the given file name to "-" to see if we should read from stdin */
+    mov $stdin_file, %rsi
+    call c_str_eq
+    cmp $0, %rax
+    jne .open_name
+
+.open_stdin:
+    mov $0, %rax
+    jmp .end_open_file
+
+.open_name:
+    mov $2, %rax
+    mov %r12, %rdi
+    mov $0, %rsi
+    syscall
+
+.end_open_file:
+    pop %r12
+    ret
+
+/**
+ * Close the given file descriptor if it isn't stdin (fd 0)
+ *
+ * rdi = file descriptor
+ */
+close_file:
+    /* if the fd is stdin, don't close it */
+    cmp $0, %rdi
+    je .end_close_file
+
+    /* otherwise, try to close it */
+    mov $3, %rax
+    syscall
+
+.end_close_file:
+    ret
+
+/**
+ * Read raw bytes from an input buffer and write base64 encoded data to an
+ * output buffer, returning the number of encoded bytes written. This method
+ * assumes the output buffer has sufficient space for the encoded version of
+ * the input.
+ *
+ * rdi = read buffer
+ * rsi = write buffer
+ * rdx = length
+ * rax = return, encoded bytes written
+ */
+encode:
+    /*
+     * r12 = read buffer pointer
+     * r13 = write buffer pointer
+     * r14 = ending pointer for read buffer
+     * r15 = starting pointer for write buffer
+     *
+     * r8 = lookup table
+     * r9 = up to three input bytes
+     * r10 = masked value of input byte
+     * r11 = translated character of masked value
+     * rcx = bytes left to read (r14 - r12)
+     */
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+
+    mov %rdi, %r12
+    mov %rsi, %r13
+
+    mov %rdi, %r14
+    add %rdx, %r14
+    mov %rsi, %r15
+    mov $lookup, %r8
+
+.encode_bytes:
+    /* Based on the current read pointer (r12) and the pointer to the end
+     * of the read buffer (r14), determine how many bytes are left to read
+     * and encode. If there are three or more bytes left, load three into
+     * a register and encode them as four, six-bit chunks with no padding.
+     *
+     * If there are two bytes left, encode them as three, six-bit chunks
+     * with one character of padding.
+     *
+     * If there is a single byte left, encode it as two, six-bit chunks
+     * and two characters padding.
+     */
+    mov %r14, %rcx
+    sub %r12, %rcx
+
+    cmp $0, %rcx
+    je .end_encode
+
+    cmp $2, %rcx
+    jl .write_one_byte
+    je .write_two_bytes
+
+.write_three_bytes:
+    /* Read three bytes of input and encode it as four characters of output.
+     * This is the default chunk size since 24 bits the the least common
+     * multiple of 8 bits (one byte of input) and 6 bits (number of bits
+     * needed to encode something in base64).
+     */
+    mov $0, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    shl $8, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    shl $8, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    /* Examine each 6 bit chunk of the input via masks */
+
+    mov %r9, %r10
+    and $0x00FC0000, %r10
+    shr $18, %r10
+    mov (%r8, %r10, 1), %r11 /* r11 := lookup[r10] */
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x0003F000, %r10
+    shr $12, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x00000FC0, %r10
+    shr $6, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x0000003F, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    jmp .encode_bytes
+
+.write_two_bytes:
+    /* Read two bytes of input and encode it as three characters of output
+     * and one character of padding.
+     */
+    mov $0, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    shl $8, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    /* Examine each 6 bit chunk of the input via masks */
+
+    mov %r9, %r10
+    and $0x0000FC00, %r10
+    shr $10, %r10
+    mov (%r8, %r10, 1), %r11 /* r11 := lookup[r10] */
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x000003F0, %r10
+    shr $4, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x0000000F, %r10
+    shl $2, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    movb $'=', (%r13)
+    inc %r13
+
+    jmp .end_encode
+
+.write_one_byte:
+    /* Read one byte of input and encode it as two characters of output
+     * and two characters of padding.
+     */
+    mov $0, %r9
+    movb (%r12), %r9b
+    inc %r12
+
+    /* Examine each 6 bit chunk of the input via masks */
+
+    mov %r9, %r10
+    and $0x000000FC, %r10
+    shr $2, %r10
+    mov (%r8, %r10, 1), %r11 /* r11 := lookup[r10] */
+    movb %r11b, (%r13)
+    inc %r13
+
+    mov %r9, %r10
+    and $0x00000003, %r10
+    shl $4, %r10
+    mov (%r8, %r10, 1), %r11
+    movb %r11b, (%r13)
+    inc %r13
+
+    movb $'=', (%r13)
+    inc %r13
+    movb $'=', (%r13)
+    inc %r13
+
+.end_encode:
+    /* Return the number of bytes of encoded data written (r13 - r15) */
+    sub %r15, %r13
+    mov %r13, %rax
+
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
+
+/**
+ * Read a file descriptor and write to another file descriptor until EOF
+ *
+ * rdi = read file descriptor
+ * rsi = write file descriptor
+ * rax = return 0 for success, 1 for error
+ */
+read_write_buf:
+    /*
+     * r12 = read file descriptor
+     * r13 = write file descriptor
+     * r14 = bytes read
+     * r15 = buffer address + offset
+     */
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+
+    mov %rdi, %r12
+    mov %rsi, %r13
+
+.read_buf:
+    /* read() syscall from input file descriptor */
+    mov $0, %rax
+    mov %r12, %rdi
+    mov $buf, %rsi
+    mov $buf_len, %rdx
+    syscall
+
+    mov %rax, %r14 /* number of bytes read */
+    mov $encoded, %r15 /* address of the buffer to write */
+
+    cmp $0, %r14
+    jl .end_error   /* if bytes read is < 0, error */
+    je .end_success /* if bytes read = 0, end */
+    /* otherwise, attempt to write the results */
+
+.encode_buf:
+    mov $buf, %rdi
+    mov $encoded, %rsi
+    mov %r14, %rdx
+    call encode
+
+    mov %rax, %r14 /* number of bytes encoded */
+
+.write_buf:
+    /* write() syscall to output file descriptor from buf */
+    mov $1, %rax
+    mov %r13, %rdi
+    mov %r15, %rsi
+    mov %r14, %rdx
+    syscall
+
+    cmp $0, %rax
+    jl .end_error /* if bytes written < 0, error */
+
+    sub %rax, %r14 /* subtract bytes written from bytes to write */
+    add %rax, %r15 /* add bytes written to the buffer offset */
+    cmp $0, %r14
+    jg .write_buf /* write again if we didn't write everything we read before */
+    jmp .read_buf /* otherwise, attempt another read + write */
+
+.end_success:
+    mov $0, %rax
+    jmp .end_read_buf
+
+.end_error:
+    mov $1, %rax
+    jmp .end_read_buf
+
+.end_read_buf:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
