@@ -8,8 +8,8 @@ Only supports x86-64 on GNU/Linux.
 
 I suddenly found myself with a lot of free time and I wanted to learn assembly.
 Lots of people create implementations of core utilities in "high level", "modern",
-and "not a tedious nightmare from which I can't wake up" languages like Rust, Go,
-or Haskell. There aren't many assembly implementations out there.
+and "productive" languages like Rust, Go, or Haskell. There aren't many assembly
+implementations out there.
 
 ## Are they at least really fast?
 
