@@ -211,8 +211,8 @@ close_file:
  * the input.
  *
  * rdi = read buffer
- * rsi = write buffer
- * rdx = length of read buffer
+ * rsi = length of read buffer
+ * rdx = write buffer
  * rax = return, encoded bytes written
  */
 encode:
@@ -234,11 +234,11 @@ encode:
     push %r15
 
     mov %rdi, %r12
-    mov %rsi, %r13
+    mov %rdx, %r13
 
     mov %rdi, %r14
-    add %rdx, %r14
-    mov %rsi, %r15
+    add %rsi, %r14
+    mov %rdx, %r15
     mov $lookup, %r8
 
 .encode_bytes:
@@ -391,9 +391,7 @@ encode:
     pop %r13
     pop %r12
     ret
-
     
-
 /** 
  * Read a file descriptor until the given buffer is full or EOF
  *
@@ -431,7 +429,7 @@ read_from_fd:
     add %rax, %r15
 
     cmp $0, %rax
-    je .success_end_read_from_fd /* bytes read = 0, end of file */
+    je .success_end_read_from_fd /* bytes read == 0, end of file */
     jl .error_end_read_from_fd /* bytes read < 0, error */
 
     cmp %rax, %r14
@@ -495,8 +493,6 @@ read_write_buf:
 
     mov %rdi, %r12
     mov %rsi, %r13
-    mov $0, %r14
-    mov $encoded, %r15
     
 .read_buf:
     mov %r12, %rdi
@@ -506,17 +502,18 @@ read_write_buf:
     
     cmp $0, %rax
     jl .end_error   /* if bytes read is < 0, error */
-    je .end_success /* if bytes read = 0, end */
+    je .end_success /* if bytes read == 0, end */
     /* otherwise, attempt to encode and write the results */
     mov %rax, %r14
     
 .encode_buf:
     mov $buf, %rdi
-    mov $encoded, %rsi
-    mov %r14, %rdx
+    mov %r14, %rsi
+    mov $encoded, %rdx
     call encode
 
     mov %rax, %r14 /* number of bytes encoded */
+    mov $encoded, %r15 /* start of the buffer to write from */
 
 .write_buf:
     /* write() syscall to output file descriptor from buf */
