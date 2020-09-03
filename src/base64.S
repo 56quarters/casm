@@ -212,7 +212,7 @@ close_file:
  *
  * rdi = read buffer
  * rsi = write buffer
- * rdx = length
+ * rdx = length of read buffer
  * rax = return, encoded bytes written
  */
 encode:
@@ -392,6 +392,88 @@ encode:
     pop %r12
     ret
 
+    
+
+/** 
+ * Read a file descriptor until the given buffer is full or EOF
+ *
+ * Basically, just call `read(2)` in a loop trying to fill up the buffer.
+ *
+ * rdi = file descriptor
+ * rsi = buffer
+ * rdx = buffer length
+ * rax = return, bytes read or -1 on error
+ */
+read_from_fd:
+    /*
+     * r12 = file descriptor
+     * r13 = buffer + offset
+     * r14 = buffer length left
+     * r15 = bytes read
+     */
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+
+    mov %rdi, %r12
+    mov %rsi, %r13
+    mov %rdx, %r14
+    mov $0, %r15
+
+.attempt_read_from_fd:
+    mov $0, %rax
+    mov %r12, %rdi
+    mov %r13, %rsi
+    mov %r14, %rdx
+    syscall
+
+    add %rax, %r15
+
+    cmp $0, %rax
+    je .success_end_read_from_fd /* bytes read = 0, end of file */
+    jl .error_end_read_from_fd /* bytes read < 0, error */
+
+    cmp %rax, %r14
+    je .success_end_read_from_fd /* bytes read == buffer size, success */
+
+    /* Otherwise we need to attempt another read to make sure we fill up
+    the buffer. The next read will either give us more data (good) or return
+    0 so we know that we've hit EOF. It's important that we completely fill
+    the buffer if possible to make sure we encode our bytes correctly and
+    don't insert eroneous padding characters */
+    add %rax, %r13
+    sub %rax, %r14
+    jmp .attempt_read_from_fd
+    
+.error_end_read_from_fd:
+    mov $-1, %rax
+    jmp .end_read_from_fd
+    
+.success_end_read_from_fd:
+    mov %r15, %rax
+    jmp .end_read_from_fd
+    
+.end_read_from_fd:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
+
+
+/**
+ * Write up to N bytes to a file descriptor from a given buffer
+ *
+ * rdi = file descriptor
+ * rsi = buffer
+ * rdx = buffer length
+ * rax = return, bytes written
+ */
+write_to_fd:
+    mov $0, %rax
+    ret
+    
 /**
  * Read a file descriptor and write to another file descriptor until EOF
  *
@@ -404,7 +486,7 @@ read_write_buf:
      * r12 = read file descriptor
      * r13 = write file descriptor
      * r14 = bytes read
-     * r15 = buffer address + offset
+     * r15 = encoded buffer address + offset
      */
     push %r12
     push %r13
@@ -413,23 +495,21 @@ read_write_buf:
 
     mov %rdi, %r12
     mov %rsi, %r13
-
+    mov $0, %r14
+    mov $encoded, %r15
+    
 .read_buf:
-    /* read() syscall from input file descriptor */
-    mov $0, %rax
     mov %r12, %rdi
     mov $buf, %rsi
     mov $buf_len, %rdx
-    syscall
-
-    mov %rax, %r14 /* number of bytes read */
-    mov $encoded, %r15 /* address of the buffer to write */
-
-    cmp $0, %r14
+    call read_from_fd
+    
+    cmp $0, %rax
     jl .end_error   /* if bytes read is < 0, error */
     je .end_success /* if bytes read = 0, end */
-    /* otherwise, attempt to write the results */
-
+    /* otherwise, attempt to encode and write the results */
+    mov %rax, %r14
+    
 .encode_buf:
     mov $buf, %rdi
     mov $encoded, %rsi
