@@ -420,6 +420,7 @@ read_from_fd:
     mov $0, %r15
 
 .attempt_read_from_fd:
+    /* read() syscall to read file descriptor into buffer */
     mov $0, %rax
     mov %r12, %rdi
     mov %r13, %rsi
@@ -463,13 +464,64 @@ read_from_fd:
 /**
  * Write up to N bytes to a file descriptor from a given buffer
  *
+ * Basically, just call `write(2)` in a loop trying to drain the buffer.
+ *
  * rdi = file descriptor
  * rsi = buffer
  * rdx = buffer length
  * rax = return, bytes written
  */
 write_to_fd:
-    mov $0, %rax
+    /*
+     * r12 = file descriptor
+     * r13 = buffer + offset
+     * r14 = buffer length left
+     * r15 = bytes written
+     */
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+
+    mov %rdi, %r12
+    mov %rsi, %r13
+    mov %rdx, %r14
+    mov $0, %r15
+
+.attempt_write_to_fd:
+    /* write() syscall to output file descriptor from buffer */
+    mov $1, %rax
+    mov %r12, %rdi
+    mov %r13, %rsi
+    mov %r14, %rdx
+    syscall
+
+    add %rax, %r15
+
+    cmp $0, %rax
+    jl .error_end_write_to_fd /* bytes written < 0, error */
+
+    cmp %rax, %r14
+    je .success_end_read_from_fd /* bytes written == buffer size, suscess */
+
+    /* Otherwise, attempt another write to drain the rest of the buffer */
+    add %rax, %r13
+    sub %rax, %r14
+    jmp .attempt_write_to_fd
+
+.error_end_write_to_fd:
+    mov $-1, %rax
+    jmp .end_write_to_fd
+
+.success_end_write_to_fd:
+    mov %r15, %rax
+    jmp .end_write_to_fd
+
+.end_write_to_fd:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
     ret
     
 /**
@@ -516,20 +568,13 @@ read_write_buf:
     mov $encoded, %r15 /* start of the buffer to write from */
 
 .write_buf:
-    /* write() syscall to output file descriptor from buf */
-    mov $1, %rax
     mov %r13, %rdi
-    mov %r15, %rsi
+    mov $encoded, %rsi
     mov %r14, %rdx
-    syscall
+    call write_to_fd
 
     cmp $0, %rax
     jl .end_error /* if bytes written < 0, error */
-
-    sub %rax, %r14 /* subtract bytes written from bytes to write */
-    add %rax, %r15 /* add bytes written to the buffer offset */
-    cmp $0, %r14
-    jg .write_buf /* write again if we didn't write everything we read before */
     jmp .read_buf /* otherwise, attempt another read + write */
 
 .end_success:
