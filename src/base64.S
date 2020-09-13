@@ -15,14 +15,14 @@
     .data
 
 /* 60K buffer for raw data. Note that this is evenly divisible by 3 (3:4 raw:encoded) */
-buf:
+raw_buf:
     .space 1024 * 60, 0x0
-    buf_len = . - buf
+    raw_buf_len = . - raw_buf
 
 /* 80k buffer for encoded data. Note that this is evenly divisible by 4 (3:4 raw:encoded) */
-encoded:
+encoded_buf:
     .space 1024 * 80, 0x0
-    encoded_len = . - encoded
+    encoded_buf_len = . - encoded_buf
 
 /* array of base64 characters, indexed on the decimal value (0-63), mapped to their ascii character */
 lookup:
@@ -548,8 +548,8 @@ read_write_buf:
     
 .read_buf:
     mov %r12, %rdi
-    mov $buf, %rsi
-    mov $buf_len, %rdx
+    mov $raw_buf, %rsi
+    mov $raw_buf_len, %rdx
     call read_from_fd
     
     cmp $0, %rax
@@ -559,17 +559,17 @@ read_write_buf:
     mov %rax, %r14
     
 .encode_buf:
-    mov $buf, %rdi
+    mov $raw_buf, %rdi
     mov %r14, %rsi
-    mov $encoded, %rdx
+    mov $encoded_buf, %rdx
     call encode
 
     mov %rax, %r14 /* number of bytes encoded */
-    mov $encoded, %r15 /* start of the buffer to write from */
+    mov $encoded_buf, %r15 /* start of the buffer to write from */
 
 .write_buf:
     mov %r13, %rdi
-    mov $encoded, %rsi
+    mov $encoded_buf, %rsi
     mov %r14, %rdx
     call write_to_fd
 
