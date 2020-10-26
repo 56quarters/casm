@@ -4,7 +4,7 @@ libs := $(out)/libproc.o $(out)/libstr.o
 cc := gcc -ggdb
 ld := ld
 
-default: build
+default: debug
 
 clean:
 	rm -rf $(out)
@@ -60,3 +60,8 @@ $(out)/yes: $(libs) $(src)/yes.S
 
 build: target $(out)/base64 $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync \
 	$(out)/touch $(out)/true $(out)/yes
+
+debug: build
+
+release: cc = gcc -Os
+release: build
