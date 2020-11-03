@@ -36,6 +36,4 @@ and require no libraries, not even libc.
 
 ## Compatibility
 
-These implementations of core utilities don't support all the options or features
-of their BSD or GNU counterparts. They're similar in spirit, but definitely not drop-in
-replacements or even remotely POSIX compatible.
+No.
