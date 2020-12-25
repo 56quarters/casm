@@ -6,22 +6,22 @@ Only supports x86-64 on GNU/Linux.
 
 ## Why did you do this?
 
-I suddenly found myself with a lot of free time and I wanted to learn assembly.
-Lots of people create implementations of core utilities in "high level", "modern",
-and "productive" languages like Rust, Go, or Haskell. There aren't many assembly
+I found myself with a lot of free time and I wanted to learn assembly. Lots of
+people create implementations of core utilities in "high level", "modern", and
+"productive" languages like Rust, Go, or Haskell. There aren't many assembly
 implementations out there.
 
 ## Are they at least really fast?
 
-Nope. They're generally on par with existing implementations except with more
-bugs, far fewer features, and far less portable. But with the power of your
-imagination, maybe they'll *feel* faster.
+No. They're generally on par with existing implementations except with more bugs,
+fewer features, and (obviously) less portable. With the power of your imagination,
+maybe they'll *feel* faster.
 
-## Should I use this stuff?
+## Should I use this?
 
 Absolutely not.
 
-## How do I build this nonsense?
+## How do I build this?
 
 Building requires the GNU toolchain: `gcc`, `ld`, and `make`.
 
