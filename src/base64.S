@@ -391,6 +391,25 @@ encode:
     pop %r13
     pop %r12
     ret
+
+
+decode:
+    /*
+     *
+     *
+     */
+    push %r12
+    push %r13
+    push %r14
+    push %r15
+    
+.end_decode:
+    pop %r15
+    pop %r14
+    pop %r13
+    pop %r12
+    ret
+    
     
 /** 
  * Read a file descriptor until the given buffer is full or EOF
