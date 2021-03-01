@@ -78,7 +78,7 @@ cli_flag_exists:
     movq %rsi, %r15
 
     /* NOTE: we just deref the stack when we need to check argc */
-    cmp $1, (%r13)
+    cmpb $1, (%r13)
     je .end_cli_flag_exists
 
 .check_each_arg:
