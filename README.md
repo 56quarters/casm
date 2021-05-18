@@ -37,3 +37,7 @@ and require no libraries, not even libc.
 ## Compatibility
 
 No.
+
+## Portability
+
+Very, as long as you only want to run them on recent versions of GNU/Linux on x86-64.
