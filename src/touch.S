@@ -190,10 +190,11 @@ open_and_update:
     jl .update_by_path
 
 .update_by_fd:
-    /* note that we're calling utimensat(2) with the file descriptor as the first
+    /* Note that we're calling utimensat(2) with the file descriptor as the first
     argument instead of directory descriptor and passing NULL for the file path.
-    this isn't documented as something that *should* work but it does, it's what
-    GNU touch seems to do, and it's less racey than doing open/close/uptime via
+    This is non-standard (according to POSIX) but supported on Linux so that the
+    futimens(2) function can be implemented as a library function (as opposed to
+    its own dedicated syscall). This is less racey than doing open/close/update via
     file paths */
     movq $280, %rax
     movq %r13, %rdi
@@ -214,10 +215,11 @@ open_and_update:
     jmp .end_open_and_update
 
 .update_by_path:
-    /* call utimensat(2) the way it's documented and just give it the path to the
-    file to update (this happens when we couldn't open the file in a writable mode
-    such as when its permissions are 444 or similar). In this case, we'll still be
-    able to update the modification times, just in a slightly more racey way */
+    /* Call utimensat(2) the way it's documented [instead of calling it like
+    futimens(2)] and just give it the path to the file to update. This happens when
+    we couldn't open the file in a writable mode such as when its permissions are
+    444 or similar. In this case, we'll still be able to update the modification
+    times, just in a slightly more racey way */
     movq $280, %rax
     movq $AT_FDCWD, %rdi
     movq %r12, %rsi
