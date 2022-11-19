@@ -40,4 +40,4 @@ No.
 
 ## Portability
 
-CASM is very portable as long as you only want to run it on recent versions of GNU/Linux on x86-64.
+No.
