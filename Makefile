@@ -1,10 +1,10 @@
 out := target
 src := src
-libs := $(out)/libproc.o $(out)/libstr.o
+libs := $(out)/libio.o $(out)/libstr.o
 cc := gcc -ggdb
 ld := ld
 
-default: build
+default: debug
 
 clean:
 	rm -rf $(out)
@@ -12,11 +12,15 @@ clean:
 target:
 	mkdir -p $(out)
 
-$(out)/libproc.o: $(src)/libproc.S
-	$(cc) -o $(out)/libproc.o -c $(src)/libproc.S
+$(out)/libio.o: $(src)/libio.S
+	$(cc) -o $(out)/libio.o -c $(src)/libio.S
 
 $(out)/libstr.o: $(src)/libstr.S
 	$(cc) -o $(out)/libstr.o -c $(src)/libstr.S
+
+$(out)/base64: $(libs) $(src)/base64.S
+	$(cc) -o $(out)/base64.o -c $(src)/base64.S
+	$(ld) -o $(out)/base64 $(libs) $(out)/base64.o
 
 $(out)/cat: $(libs) $(src)/cat.S
 	$(cc) -o $(out)/cat.o -c $(src)/cat.S
@@ -54,5 +58,10 @@ $(out)/yes: $(libs) $(src)/yes.S
 	$(cc) -o $(out)/yes.o -c $(src)/yes.S
 	$(ld) -o $(out)/yes $(libs) $(out)/yes.o
 
-build: target $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync \
+build: target $(out)/base64 $(out)/cat $(out)/echo $(out)/false $(out)/pwd $(out)/sleep $(out)/sync \
 	$(out)/touch $(out)/true $(out)/yes
+
+debug: build
+
+release: cc = gcc -Os
+release: build

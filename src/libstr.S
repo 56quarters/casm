@@ -15,7 +15,8 @@
     .text
 
     .global c_str_copy, c_str_eprint, c_str_eq, c_str_len, c_str_print
-    .global c_str_to_number, c_str_write, c_str_write_len, is_digit
+    .global c_str_to_number, c_str_write, c_str_write_len, is_upper
+    .global is_lower, is_digit
 
 /**
  * Return 0 if two c strings (null terminated) are equal, 1 otherwise
@@ -275,20 +276,55 @@ c_str_to_number:
     ret
 
 /**
- * Return 1 if the given byte is an ascii digit, 0 otherwise
+ * Return 1 if the given byte is ASCII uppercase, 0 otherwise
+ *
+ * dil = byte to check
+ * rax = return, 1 for uppercase 0 for anything else
+ */
+is_upper:
+    cmpb $65, %dil /* ascii A */
+    jl .is_upper_false
+    cmpb $90, %dil /* ascii Z */
+    jg .is_upper_false
+
+    movq $1, %rax
+    ret
+.is_upper_false:
+    movq $0, %rax
+    ret
+
+/**
+ * Return 1 if the given byte is ASCII lowercase, 0 otherwise
+ *
+ * dil = byte to check
+ * rax = return, 1 for lowercase 0 for anything else
+ */
+is_lower:
+    cmpb $97, %dil /* ascii a */
+    jl .is_lower_false
+    cmpb $122, %dil /* ascii z */
+    jg .is_lower_false
+
+    movq $1, %rax
+    ret
+.is_lower_false:
+    movq $0, %rax
+    ret
+
+/**
+ * Return 1 if the given byte is an ASCII digit, 0 otherwise
  *
  * dil = byte to check
  * rax = return, 1 for a digit 0 for non-digit
  */
 is_digit:
     cmpb $48, %dil /* ascii 0 */
-    jl .set_false
+    jl .is_digit_false
     cmpb $57, %dil /* ascii 9 */
-    jg .set_false
+    jg .is_digit_false
 
     movq $1, %rax
     ret
-
-.set_false:
+.is_digit_false:
     movq $0, %rax
     ret

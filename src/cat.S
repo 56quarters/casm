@@ -33,9 +33,6 @@ help_msg:
 help_long:
     .asciz "--help"
 
-stdin_file:
-    .asciz "-"
-
 error_msg_bad_open:
     .asciz "cat: could not open file\n"
 
@@ -50,7 +47,7 @@ error_msg_bad_write:
  * Entry point - read from stdin or several files and write to stdout.
  *
  * Exit when EOF is recieved on stdin or when all files (passed via argv) have
- * been read. If any file cannot be read, this program with exit with an error
+ * been read. If any file cannot be read, this program will exit with an error
  * (non-zero) status.
  */
 _start:
@@ -140,57 +137,12 @@ _start:
     call exit_error
 
 /**
- * Open a file of the given name or stdin if the file is "-"
- *
- * rdi = pointer to file name
- * rax = return, file descriptor
- */
-open_file:
-    /*
-     * r12 = pointer to file name
-     */
-    push %r12
-    movq %rdi, %r12
-
-    /* compare the given file name to "-" to see if we should read from stdin */
-    movq $stdin_file, %rsi
-    call c_str_eq
-    cmp $0, %rax
-    jne .open_name
-
-.open_stdin:
-    movq $0, %rax
-    jmp .end_open_file
-
-.open_name:
-    movq $2, %rax
-    movq %r12, %rdi
-    movq $0, %rsi
-    syscall
-
-.end_open_file:
-    pop %r12
-    ret
-
-/**
- * Close the given file descriptor if it isn't stdin (fd 0)
- *
- * rdi = file descriptor
- */
-close_file:
-    /* if the fd is stdin, don't close it */
-    cmp $0, %rdi
-    je .end_close_file
-
-    /* otherwise, try to close it */
-    movq $3, %rax
-    syscall
-
-.end_close_file:
-    ret
-
-/**
  * Read a file descriptor and write to another file descriptor until EOF
+ *
+ * NOTE that this differs from the `read_from_fd` and `write_to_fd` methods
+ * in base64 since it will do a write after every read (which is important
+ * when reading from stdin) as opposed to those methods, which attempt to
+ * read until EOF.
  *
  * rdi = read file descriptor
  * rsi = write file descriptor
