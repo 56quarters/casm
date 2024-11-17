@@ -19,11 +19,6 @@ timespec:
     .space 8, 0x0 /* 8 bytes for time_t "tv_sec" */
     .space 8, 0x0 /* 8 bytes for long "tv_nsec" */
 
-/* 4K buffer for arguments */
-buf:
-    .space 1024 * 4, 0x0
-    buf_len = . - buf
-
 help_msg:
     .ascii "Usage: sleep [OPTION]... [NUMBER][SUFFIX]...\n"
     .ascii "\n"
